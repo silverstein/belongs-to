@@ -35,9 +35,9 @@ The kit itself makes no network calls and has no server. Fonts are embedded, and
 ## Install
 
 ```bash
-npx skills add <owner>/belongs-to
+npx skills add silverstein/belongs-to
 # or clone into your agent's skills folder
-git clone https://github.com/<owner>/belongs-to ~/.claude/skills/belongs-to
+git clone https://github.com/silverstein/belongs-to ~/.claude/skills/belongs-to
 ```
 
 Requires Node 22 or newer. There is no npm install. Screenshots and the in-browser text checks need Chrome or Chromium (set `CHROME_PATH` if it isn't found).
