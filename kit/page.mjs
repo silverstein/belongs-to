@@ -2,7 +2,7 @@
 // receipt, as one self-contained HTML page (fonts embedded, no network).
 import { fontFaceCss, FAMILIES } from "./fonts.mjs";
 import { esc, listJoin } from "./text.mjs";
-import { citeLabel } from "./model.mjs";
+import { citeLabel, missingFromIntake } from "./model.mjs";
 
 export const CSS = `
 :root{
@@ -71,6 +71,7 @@ body{font-family:${FAMILIES.sans};-webkit-font-smoothing:antialiased;text-render
 .bt-sources{margin:0;padding:0;list-style:none;columns:2 260px;column-gap:28px;font:400 12.5px/1.45 ${FAMILIES.sans};color:var(--bt-ink-2)}
 .bt-sources li{break-inside:avoid;margin:0 0 6px;padding-left:0}
 .bt-sources b{font:500 11.5px/1 ${FAMILIES.mono};color:var(--bt-ink);margin-right:6px}
+.bt-sources i{font-style:normal;color:var(--bt-ask)}
 .bt-receipt{margin:0;padding:0;list-style:none;font:400 12.5px/1.45 ${FAMILIES.sans};color:var(--bt-ink-2)}
 .bt-receipt li{display:flex;gap:8px;margin:0 0 5px}
 .bt-receipt li::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;margin-top:6px;background:var(--bt-ok)}
@@ -270,6 +271,8 @@ function legendSvg(kind) {
 
 export function pageHtml({ model, view, figureSvg, figureWidth, stackedSvg = null, extraSections = [], notes, legend, receipt, sourcesUsed }) {
   const docs = sourcesUsed.map((id) => ({ id, ...model.documents[id] }));
+  const missing = missingFromIntake(model);
+  const partial = docs.filter((d) => d.read === "partial");
   const asOf = new Date(model.raw.asOf + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   const plateW = Math.max(1040, Math.min(1480, figureWidth + 40));
   return `<!doctype html>
@@ -296,9 +299,9 @@ ${CSS}</style>
   ${legend?.length ? `<div class="bt-legend">${legend.map((item) => `<span>${legendSvg(item.kind)}${esc(item.text)}</span>`).join("")}</div>` : ""}
   ${extraSections.map((s) => `<div class="bt-section">${s}</div>`).join("")}
   ${notes.length ? `<section class="bt-notes" aria-label="Notes">${notes.map((n) => `<div class="bt-note ${esc(n.tone)}" data-on="${esc(n.on ?? "")}"><h3><span class="bt-letter ${esc(n.tone)}">${esc(n.letter)}</span><span>${esc(n.title)}</span></h3><p>${esc(n.body)}</p></div>`).join("")}</section>` : ""}
-  <footer class="bt-foot${model.raw.notInDocuments?.length ? " bt-has-missing" : ""}">
-    <div><h4>Drawn from</h4><ul class="bt-sources">${docs.map((d) => `<li><b>${esc(d.short)}</b>${esc(d.title)}${d.date && !d.title.includes(d.date.slice(0, 4)) ? `, ${esc(d.date.slice(0, 4))}` : ""}</li>`).join("")}</ul></div>
-    ${model.raw.notInDocuments?.length ? `<div class="bt-missing"><h4>Not in the documents</h4><ul class="bt-sources">${model.raw.notInDocuments.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></div>` : ""}
+  <footer class="bt-foot${missing.length ? " bt-has-missing" : ""}">
+    <div><h4>Drawn from</h4><ul class="bt-sources">${docs.map((d) => `<li><b>${esc(d.short)}</b>${esc(d.title)}${d.date && !d.title.includes(d.date.slice(0, 4)) ? `, ${esc(d.date.slice(0, 4))}` : ""}${d.read === "partial" ? ` <i>(${esc(d.readNote ?? "read in part")})</i>` : ""}</li>`).join("")}</ul></div>
+    ${missing.length ? `<div class="bt-missing"><h4>Looked for, not found</h4><ul class="bt-sources">${missing.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></div>` : ""}
     <div><h4>Checked before drawing</h4><ul class="bt-receipt">${receipt.map((r) => `<li class="${r.open ? "open" : ""}">${esc(r.text)}</li>`).join("")}</ul></div>
     ${view.law ? `<p class="bt-law"><b>Law applied</b> ${esc(view.law)}</p>` : ""}
     <p class="bt-disclaimer"><span>${model.raw.synthetic ? "A made-up family, for illustration. " : ""}A picture of what the documents say, not legal or tax advice. Your attorney or CPA confirms it.</span><span class="bt-mark">Drawn with belongs-to, an open-source tool with no server · every fact cited</span></p>

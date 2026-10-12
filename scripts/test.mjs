@@ -256,6 +256,48 @@ test("a missing state fails", () => {
   expectFail(raw, "context the law turns on", /no jurisdiction/);
 });
 
+test("intake: a document with no read status fails", () => {
+  const raw = load("ellery");
+  delete raw.documents.trust.read;
+  expectFail(raw, "intake recorded", /"trust" has no read status/);
+});
+
+test("intake: a citation into a document that was not provided fails", () => {
+  const raw = load("ellery");
+  raw.documents["deed-home"].read = "not-provided";
+  expectFail(raw, "intake recorded", /cites "deed-home", which was not provided/);
+});
+
+test("intake: a citation into an unreadable scan fails", () => {
+  const raw = load("park");
+  raw.documents["05-deed-914-josephine.md"].read = "unreadable";
+  expectFail(raw, "intake recorded", /was not readable/);
+});
+
+test("intake: 'not in the documents' with no record of looking fails", () => {
+  const raw = load("ellery");
+  delete raw.intake;
+  expectFail(raw, "intake recorded", /lookedFor does not record what was searched/);
+});
+
+test("intake: a hand-written notInDocuments list is refused", () => {
+  const raw = load("park");
+  raw.notInDocuments = ["Dana's will"];
+  expectFail(raw, "intake recorded", /hand-written/);
+});
+
+test("intake: a 'found' entry must name its document", () => {
+  const raw = load("okafor");
+  raw.intake.lookedFor.push({ what: "A thing", result: "found" });
+  expectFail(raw, "intake recorded", /names no document/);
+});
+
+test("intake: a partially read document must say which pages", () => {
+  const raw = load("ellery");
+  raw.documents.trust.read = "partial";
+  expectFail(raw, "intake recorded", /readNote does not say which pages/);
+});
+
 test("layout audit catches two cards placed on top of each other", () => {
   const raw = load("ellery");
   raw.views[0].place.ira = raw.views[0].place.brokerage;

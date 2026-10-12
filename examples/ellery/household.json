@@ -8,85 +8,99 @@
       "title": "Ellery Family Revocable Trust",
       "short": "Trust",
       "kind": "Trust agreement",
-      "date": "2019-04-12"
+      "date": "2019-04-12",
+      "read": "read"
     },
     "will-sam": {
       "title": "Last Will of Sam Ellery (pour-over), naming Ohio as his home",
       "short": "Sam's will",
       "kind": "Will",
-      "date": "2019-04-12"
+      "date": "2019-04-12",
+      "read": "read"
     },
     "deed-home": {
       "title": "General warranty deed, 40 Hillside Road, to the trustees",
       "short": "Home deed",
       "kind": "Deed",
-      "date": "2019-05-02"
+      "date": "2019-05-02",
+      "read": "read"
     },
     "elm-assign": {
       "title": "Assignment of membership interest in Elm Street Rentals LLC, admitting the trust as member",
       "short": "Assignment",
       "kind": "Assignment",
-      "date": "2019-05-20"
+      "date": "2019-05-20",
+      "read": "read"
     },
     "elm-oa": {
       "title": "Elm Street Rentals LLC operating agreement",
       "short": "Elm LLC agreement",
       "kind": "Operating agreement",
-      "date": "2018-02-01"
+      "date": "2018-02-01",
+      "read": "read"
     },
     "birch-oa": {
       "title": "Birch Avenue LLC operating agreement",
       "short": "Birch LLC agreement",
       "kind": "Operating agreement",
-      "date": "2022-06-15"
+      "date": "2022-06-15",
+      "read": "read"
     },
     "brokerage-stmt": {
       "title": "Joint brokerage statement, September 2026",
       "short": "Brokerage statement",
       "kind": "Account statement",
-      "date": "2026-09-30"
+      "date": "2026-09-30",
+      "read": "read"
     },
     "401k-form": {
       "title": "401(k) beneficiary confirmation",
       "short": "401(k) beneficiary form",
       "kind": "Beneficiary designation",
-      "date": "2021-01-08"
+      "date": "2021-01-08",
+      "read": "read"
     },
     "401k-stmt": {
       "title": "401(k) statement, Q3 2026",
       "short": "401(k) statement",
       "kind": "Account statement",
-      "date": "2026-09-30"
+      "date": "2026-09-30",
+      "read": "read"
     },
     "policy": {
       "title": "Term life policy on Sam Ellery",
       "short": "Policy",
       "kind": "Insurance policy",
-      "date": "2020-03-11"
+      "date": "2020-03-11",
+      "read": "read"
     },
     "ira-stmt": {
       "title": "Dana's IRA statement, Q3 2026",
       "short": "IRA statement",
       "kind": "Account statement",
-      "date": "2026-09-30"
+      "date": "2026-09-30",
+      "read": "read"
     },
     "appraisals": {
       "title": "Property valuations and loan statements, 2026",
       "short": "Valuations",
       "kind": "Valuation",
-      "date": "2026-08-15"
+      "date": "2026-08-15",
+      "read": "read"
     },
     "deed-birch": {
       "title": "Limited warranty deed, 22 Birch Avenue, to Birch Avenue LLC",
       "short": "Birch deed",
       "kind": "Deed",
-      "date": "2022-07-01"
+      "date": "2022-07-01",
+      "read": "read"
     },
     "deed-elm": {
       "title": "General warranty deed, 1418 Elm Street, to Elm Street Rentals LLC",
       "short": "Elm deed",
       "kind": "Deed",
-      "date": "2018-03-05"
+      "date": "2018-03-05",
+      "read": "read"
     }
   },
   "parties": {
@@ -562,10 +576,42 @@
       "at": "Art. 1"
     }
   },
-  "notInDocuments": [
-    "Dana’s will",
-    "Durable financial powers of attorney for Sam and Dana (someone must be able to sign for Sam if Sam can’t)",
-    "Health care directives",
-    "A record of who contributed what to the joint trust"
-  ]
+  "intake": {
+    "lookedFor": [
+      {
+        "what": "Sam's will",
+        "result": "found",
+        "doc": "will-sam"
+      },
+      {
+        "what": "Dana's will",
+        "result": "missing",
+        "note": "only Sam's will was provided"
+      },
+      {
+        "what": "Durable financial powers of attorney for Sam and Dana",
+        "result": "missing",
+        "note": "someone must be able to sign for Sam if Sam can't"
+      },
+      {
+        "what": "Health care directives",
+        "result": "missing"
+      },
+      {
+        "what": "A record of who contributed what to the joint trust",
+        "result": "missing",
+        "note": "decides which part counts as Sam's"
+      },
+      {
+        "what": "Beneficiary form for Dana's IRA",
+        "result": "missing",
+        "note": "the statement shows no designation page"
+      },
+      {
+        "what": "An assignment of Birch Avenue LLC to the trust",
+        "result": "missing",
+        "note": "the Elm Street assignment was provided; nothing for Birch"
+      }
+    ]
+  }
 }

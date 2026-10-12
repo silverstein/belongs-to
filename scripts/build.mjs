@@ -5,7 +5,7 @@
 // writes the pages anyway so you can look at what is wrong.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { loadModel, shortName } from "../kit/model.mjs";
+import { loadModel, shortName, missingFromIntake } from "../kit/model.mjs";
 import { verify } from "../kit/verify.mjs";
 import { renderStructure } from "../kit/structure.mjs";
 import { renderTransfer } from "../kit/transfer.mjs";
@@ -45,8 +45,10 @@ for (const view of model.views) {
   const openLetters = [...new Set(openHere.map((o) => notes.find((n) => n.on === o.where.split(".")[0])?.letter).filter(Boolean))];
   if (openHere.length) receipt.push({ text: `${openHere.length === 1 ? "One fact" : `${openHere.length} facts`} the documents don’t show, marked rather than guessed${openLetters.length ? ` (${openLetters.length === 1 ? "note" : "notes"} ${openLetters.join(", ")})` : ""}`, open: true });
   const illustrative = facts.open.filter((o) => o.status === "illustrative");
-  const notIn = model.raw.notInDocuments?.length ?? 0;
-  if (notIn) receipt.push({ text: `${notIn} documents a careful review would want are listed as missing`, open: true });
+  const notIn = missingFromIntake(model).length;
+  const readCount = Object.values(model.documents).filter((d) => d.read === "read" || d.read === "partial").length;
+  if (checkNamed("intake recorded")) receipt.push({ text: `${readCount} documents read; every citation points into one of them` });
+  if (notIn) receipt.push({ text: `${notIn} ${notIn === 1 ? "thing" : "things"} a careful review looked for and did not find, listed below`, open: true });
   if (illustrative.length) receipt.push({ text: `The sale price is an example`, open: true });
 
   if (view.type === "structure") {

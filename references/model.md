@@ -35,6 +35,26 @@ Cite a legal conclusion (grantor-trust status, disregarded-entity status, C-corp
 
 - `jurisdiction` is required whenever there is an event. Cite the document that establishes residence (a return, an intake note, a will's recital). `communityProperty` is the legal classification of that state, not a document fact; the kit applies it as law.
 - `short` is how a document is cited on cards, so keep it to one or two words. Shorts must be unique: three documents all called "Statement" can't be told apart.
+- Every document carries `read`: `read`, `partial` (with `readNote` saying which pages, for example "pp. 1 to 6 of 40"), `unreadable` (a scan the agent could not read) or `not-provided` (the household mentioned it but did not hand it over). A citation into an `unreadable` or `not-provided` document fails the build. Unread documents still belong in the list, because "we knew about it and could not read it" is a finding.
+
+## Intake
+
+The intake record is what the agent looked for, before it modeled anything. It is the evidence behind every "not in the documents" on the page, and the build derives the footer's "Looked for, not found" list from it. It is never typed by hand into the footer.
+
+```json
+"intake": {
+  "lookedFor": [
+    { "what": "Dana's will", "result": "missing", "note": "only Sam's will was provided" },
+    { "what": "Beneficiary form for Dana's IRA", "result": "missing", "note": "the statement shows no designation page" },
+    { "what": "Sam's will", "result": "found", "doc": "will-sam" },
+    { "what": "The 2019 appraisal", "result": "unreadable" }
+  ]
+}
+```
+
+- `result` is `found` (name the `doc`), `missing` or `unreadable`.
+- Any fact marked `status: "unknown"` requires a `lookedFor` entry somewhere: the audit refuses an unknown with no record of the search.
+- Write what a careful attorney or CPA would ask for next, not only what the figures needed: wills for both spouses, powers of attorney, plan default rules, the operating agreement's transfer clause, the custodial agreement a statement cites.
 
 ## Parties
 

@@ -17,7 +17,7 @@ export function renderTransferStacked(model, view, { noteBadges }) {
   const picked = (view.order ?? all.map((r) => r.id)).map((id) => all.find((r) => r.id === id)).filter(Boolean);
   const problems = all.filter((r) => !picked.includes(r)).map((r) => `${r.id} is affected by the event but not shown`);
 
-  const W = 420, M = 14, cardW = 290, gutterX = M + cardW + 14; // lanes live from gutterX to W - M
+  const W = 420, M = 14, cardW = 282, gutterX = M + cardW + 14; // lanes live from gutterX to W - M - 6
   const bandHead = 46, baseRowH = 84, rowGap = 10, bandGap = 12, bandPadB = 12;
   const stationLinesOf = (row) => wrap(ROUTES[row.route].court ? `Probate court first. ${row.detail}` : row.detail, "laneSub", cardW - 54, 2);
   const fixLinesOf = (row) => (view.fixes?.[row.id] ? wrap(view.fixes[row.id], "laneSub", cardW - 40, 2) : []);

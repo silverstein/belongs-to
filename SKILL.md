@@ -37,13 +37,14 @@ Three failures this prevents, all seen in review by a trusts-and-estates attorne
    - "What does a sale do for QSBS?" → `structure` view with a `qsbs` ledger on a `sale` event.
    Most households want a structure view first and one event view second, both built from the same model.
 2. **Read the documents where they are.** Read the user's files with your own tools. The kit's scripts make no network calls and there is no belongs-to server, but what you read goes to the model you run on, so tell the user that plainly the first time: their documents are seen by the same model they are already talking to, and by nothing else. Never upload them anywhere else, never paste them into a web service, and don't keep copies outside the folder the user chose. Offer a redacted first pass (names and account numbers removed) to anyone who wants to check the citations before trusting it with the real set. If a document is a scan you can't read, say so and mark the facts it would hold as `unknown`.
-3. **Write the model** (`household.json`, see `references/model.md`). Record documents first, then parties, assets and holdings, each with `source: { doc, at }`. Use the exact page, article, section or schedule. Then add `jurisdiction`, each relevant person's `marital` status, and the events.
+3. **Record the intake before modeling.** List every document in `documents` with a `read` status (`read`, `partial` with the pages, `unreadable`, `not-provided`). Then write `intake.lookedFor`: what a careful review would want and whether each was found, missing or unreadable (wills for both spouses, powers of attorney, beneficiary forms for every account, the operating agreement's transfer clause, the custodial agreement a statement cites). The footer's "Looked for, not found" list is derived from this record; the build refuses a hand-written one, a citation into a document that was not read, and any "not in the documents" claim with no record of the search.
+4. **Write the model** (`household.json`, see `references/model.md`). Record parties, assets and holdings, each with `source: { doc, at }`. Use the exact page, article, section or schedule. Then add `jurisdiction`, each relevant person's `marital` status, and the events.
    - When the documents don't say: `source: { status: "unknown", note }`.
    - When the figure must assume something to compute: `source: { status: "assumed", note }`.
    - For a hypothetical, such as a sale price: `status: "illustrative"`.
    - Ask the user for state and marital status if no document shows them. Don't infer them from an address alone unless a document states residence.
-4. **Place the cards.** Each view's `place` maps ids to `[column, row]`, with fractions allowed. Owners sit above what they own, one row per level. Keep members of a zone contiguous. Leave about 0.9 of a column between a card and a zone that a gap arrow must cross. Read `references/design.md` before composing.
-5. **Write the notes.** One note per finding, lettered in order of importance:
+5. **Place the cards.** Each view's `place` maps ids to `[column, row]`, with fractions allowed. Owners sit above what they own, one row per level. Keep members of a zone contiguous. Leave about 0.9 of a column between a card and a zone that a gap arrow must cross. Read `references/design.md` before composing.
+6. **Write the notes.** One note per finding, lettered in order of importance:
    - **The title is the answer**, in plain words ("The documents don't show a beneficiary for Dana's IRA."), never a teaser.
    - **The body says why, what fixes it, and who fixes it** ("the estate attorney can prepare an assignment, after checking the operating agreement and the loan"). Name the fix and the professional; never write the instrument.
    - **Tone:**
@@ -52,12 +53,12 @@ Three failures this prevents, all seen in review by a trusts-and-estates attorne
      - `ask` is for what the documents don't show.
      - A documented absence that causes a problem (a form that names no one, a title with no co-owner, no will) is `flag`: the documents are clear, and the result is a court.
      - Red reads as "mistake" to a client, so don't use it for a deliberate planning choice.
-6. **Build and fix to zero.** Run `node scripts/build.mjs path/to/household.json`. It runs the facts audit and the layout audit and writes nothing until both pass. Read every failing line and fix the model or the placement, never the check. `--force` writes the pages anyway so you can look.
-7. **Look like a critic.**
+7. **Build and fix to zero.** Run `node scripts/build.mjs path/to/household.json`. It runs the facts audit and the layout audit and writes nothing until both pass. Read every failing line and fix the model or the placement, never the check. `--force` writes the pages anyway so you can look.
+8. **Look like a critic.**
    - Run `node scripts/shoot.mjs out/<view>.html` for light, then `--theme dark` and `--width 390` (which checks the stacked layout). The script exits 1 on overflowing or colliding text and prints it. `out/<view>.html#focus=<id>` checks a deep link.
    - Read every PNG. Zoom with `--zoom x,y,w,h` on each junction, chip and note.
    - Ask: does the title answer the question in five seconds? Does the drawing imply anything the text doesn't? For example, a line that seems to pass through probate, or a red box on a deliberate choice.
-8. **Optional cold read.** For anything public, show the PNGs to fresh reviewers with no context: an owner like the subject, someone outside the target, and a skeptical attorney or CPA. Ask what each figure says and what is wrong. Fix what they name. The examples went through this loop.
+9. **Optional cold read.** For anything public, show the PNGs to fresh reviewers with no context: an owner like the subject, someone outside the target, and a skeptical attorney or CPA. Ask what each figure says and what is wrong. Fix what they name. The examples went through this loop.
 
 ## What this skill does not do
 

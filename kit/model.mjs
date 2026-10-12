@@ -87,3 +87,11 @@ export function citeLabel(model, source) {
 }
 
 export const shortName = (node) => node.short ?? node.name;
+
+// What a careful review wanted and the documents didn't give: derived from
+// the intake record, never typed by hand.
+export function missingFromIntake(model) {
+  const items = (model.raw.intake?.lookedFor ?? []).filter((i) => i.result !== "found");
+  const unreadable = Object.entries(model.documents).filter(([, d]) => d.read === "unreadable" || d.read === "not-provided").map(([id, d]) => `${d.title}${d.read === "unreadable" ? " (could not be read)" : " (not provided)"}`);
+  return [...items.map((i) => `${i.what}${i.result === "unreadable" ? " (could not be read)" : ""}${i.note ? `: ${i.note}` : ""}`), ...unreadable];
+}

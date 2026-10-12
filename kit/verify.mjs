@@ -39,6 +39,34 @@ export function verify(model) {
   for (const { source, where } of sources) if (source.doc && !documents[source.doc]) refProblems.push(`${where} cites document "${source.doc}", which is not listed`);
   check("references resolve", refProblems);
 
+  // 1b. Intake: every document says whether it was read, a citation never
+  // points into one that wasn't, and every "not in the documents" claim is
+  // backed by a record of having looked.
+  const intakeProblems = [];
+  const READ = ["read", "partial", "unreadable", "not-provided"];
+  for (const [id, doc] of Object.entries(documents)) {
+    if (!doc.read) intakeProblems.push(`document "${id}" has no read status (read, partial, unreadable or not-provided)`);
+    else if (!READ.includes(doc.read)) intakeProblems.push(`document "${id}" has read status "${doc.read}", which is not one of ${READ.join(", ")}`);
+    if (doc.read === "partial" && !doc.readNote) intakeProblems.push(`document "${id}" is partially read but readNote does not say which pages`);
+  }
+  for (const { source, where } of sources) {
+    const doc = source.doc && documents[source.doc];
+    if (doc && ["unreadable", "not-provided"].includes(doc.read)) intakeProblems.push(`${where} cites "${source.doc}", which was ${doc.read === "unreadable" ? "not readable" : "not provided"}`);
+  }
+  const intake = model.raw.intake;
+  const unknownFacts = sources.filter(({ source }) => source.status === "unknown");
+  if (unknownFacts.length || model.raw.notInDocuments) {
+    if (!intake?.lookedFor?.length) intakeProblems.push(`facts are marked "not in the documents" but intake.lookedFor does not record what was searched`);
+  }
+  for (const item of intake?.lookedFor ?? []) {
+    if (!item.what) intakeProblems.push(`an intake.lookedFor entry has no "what"`);
+    if (!["found", "missing", "unreadable"].includes(item.result)) intakeProblems.push(`intake.lookedFor "${item.what}" needs result found, missing or unreadable`);
+    if (item.result === "found" && !item.doc) intakeProblems.push(`intake.lookedFor "${item.what}" is found but names no document`);
+    if (item.doc && !documents[item.doc]) intakeProblems.push(`intake.lookedFor "${item.what}" names document "${item.doc}", which is not listed`);
+  }
+  if (model.raw.notInDocuments) intakeProblems.push(`notInDocuments is hand-written; move each entry into intake.lookedFor with result "missing" so the footer is derived from the search`);
+  check("intake recorded", intakeProblems);
+
   // 2. Every fact is cited, or openly marked
   const citeProblems = [];
   for (const h of holdings) if (!isCited(h.source)) citeProblems.push(`holding ${h.holders.join("+")} → ${h.held} has no source`);

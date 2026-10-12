@@ -8,79 +8,92 @@
       "title": "Tallgrass Robotics, Inc. certificate of incorporation (Delaware C corporation)",
       "short": "Charter",
       "kind": "Charter",
-      "date": "2021-02-22"
+      "date": "2021-02-22",
+      "read": "read"
     },
     "spa": {
       "title": "Founder stock purchase agreement",
       "short": "Stock purchase",
       "kind": "Stock purchase agreement",
-      "date": "2021-03-01"
+      "date": "2021-03-01",
+      "read": "read"
     },
     "captable": {
       "title": "Tallgrass cap table, issued shares, September 2026",
       "short": "Cap table",
       "kind": "Cap table",
-      "date": "2026-09-30"
+      "date": "2026-09-30",
+      "read": "read"
     },
     "holdco-oa": {
       "title": "Okafor Holdings LLC operating agreement",
       "short": "LLC agreement",
       "kind": "Operating agreement",
-      "date": "2021-02-10"
+      "date": "2021-02-10",
+      "read": "read"
     },
     "idgt": {
       "title": "Okafor 2023 Irrevocable Trust",
       "short": "Trust",
       "kind": "Trust agreement",
-      "date": "2023-11-30"
+      "date": "2023-11-30",
+      "read": "read"
     },
     "ada-trust": {
       "title": "Ada Okafor 2023 Trust",
       "short": "Trust",
       "kind": "Trust agreement",
-      "date": "2023-11-30"
+      "date": "2023-11-30",
+      "read": "read"
     },
     "theo-trust": {
       "title": "Theo Okafor 2023 Trust",
       "short": "Trust",
       "kind": "Trust agreement",
-      "date": "2023-11-30"
+      "date": "2023-11-30",
+      "read": "read"
     },
     "gifts": {
       "title": "Stock assignments and gift tax return (Form 709), 2023",
       "short": "Gift records",
       "kind": "Assignment",
-      "date": "2023-12-15"
+      "date": "2023-12-15",
+      "read": "read"
     },
     "loi": {
       "title": "Illustrative acquisition terms",
       "short": "Illustrative terms",
       "kind": "Scenario",
-      "date": "2026-10-11"
+      "date": "2026-10-11",
+      "read": "read"
     },
     "maya-1040": {
       "title": "Maya’s Form 1040, 2025 (Texas address, filing single)",
       "short": "Form 1040",
       "kind": "Tax return",
-      "date": "2026-04-10"
+      "date": "2026-04-10",
+      "read": "read"
     },
     "tax-memo": {
       "title": "Tax counsel memo on the income-tax status of Okafor Holdings LLC and the 2023 trusts",
       "short": "Counsel memo",
       "kind": "Memo",
-      "date": "2023-12-01"
+      "date": "2023-12-01",
+      "read": "read"
     },
     "f1120": {
       "title": "Tallgrass Form 1120 returns, 2021 to 2025 (no S election)",
       "short": "Form 1120s",
       "kind": "Tax return",
-      "date": "2026-04-15"
+      "date": "2026-04-15",
+      "read": "read"
     },
     "election83b": {
       "title": "Section 83(b) election for the founder shares, March 2021",
       "short": "83(b) election",
       "kind": "Tax election",
-      "date": "2021-03-15"
+      "date": "2021-03-15",
+      "read": "read"
     }
   },
   "parties": {
@@ -534,5 +547,44 @@
       "doc": "maya-1040",
       "at": "p. 1"
     }
+  },
+  "intake": {
+    "lookedFor": [
+      {
+        "what": "Proof of the gross-asset test at issuance (balance sheet, March 2021)",
+        "result": "missing",
+        "note": "company counsel can confirm"
+      },
+      {
+        "what": "Evidence of the active-business test over the holding period",
+        "result": "missing"
+      },
+      {
+        "what": "Any stock redemptions around the 2021 issuance",
+        "result": "missing",
+        "note": "no redemption records were provided"
+      },
+      {
+        "what": "Form 8832 or a partnership return for Okafor Holdings LLC",
+        "result": "missing",
+        "note": "the counsel memo states disregarded status; no filing was provided"
+      },
+      {
+        "what": "The 2026 Form 1120",
+        "result": "missing",
+        "note": "not yet filed"
+      },
+      {
+        "what": "The trusts' remainder provisions",
+        "result": "found",
+        "doc": "ada-trust",
+        "note": "Art. 4 names one child each; remainder terms need the same check"
+      },
+      {
+        "what": "Maya's marital and filing status",
+        "result": "found",
+        "doc": "maya-1040"
+      }
+    ]
   }
 }

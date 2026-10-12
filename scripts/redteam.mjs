@@ -25,7 +25,10 @@ const attacks = [
   { name: "A probate route with no note explaining it", expect: true, run: (raw) => { for (const v of raw.views) v.notes = v.notes.filter((n) => n.on !== "birchllc"); }, on: "ellery" },
   { name: "Trust terms at death left uncited", expect: true, run: (raw) => { delete raw.parties.trust.trust.onDeath.source; }, on: "ellery" },
   { name: "A dollar value in a note that the model never produces", expect: true, run: (raw) => { raw.views[1].notes[0].body += " Probate fees here run about $38,000."; }, on: "ellery" },
+  { name: "A citation into a document the agent never read", expect: true, run: (raw) => { raw.documents["deed-home"].read = "not-provided"; }, on: "ellery" },
+  { name: "'Not in the documents' claimed with no record of having looked", expect: true, run: (raw) => { delete raw.intake; }, on: "ellery" },
   // Attacks the audit cannot see. Each needs the documents and a reader.
+  { name: "A document marked 'read' that the agent only skimmed", expect: false, run: (raw) => { raw.documents.trust.read = "read"; raw.documents.trust.title += " (actually skimmed)"; }, on: "ellery" },
   { name: "Citation points to the right document but the wrong page", expect: false, run: (raw) => { raw.holdings.find((h) => h.held === "home").source.at = "p. 4"; }, on: "ellery" },
   { name: "A value typed wrong from the statement ($740K → $470K)", expect: false, run: (raw) => { raw.assets.birch.value.usd = 470000; }, on: "ellery" },
   { name: "Beneficiary swapped to a different real person", expect: false, run: (raw) => { raw.assets.k401.designation.primary = [{ to: "sam", share: 1 }]; raw.holdings.find((h) => h.held === "k401").holder = "dana"; }, on: "ellery" },
