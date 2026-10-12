@@ -1,0 +1,571 @@
+{
+  "kind": "belongs-to/household@1",
+  "household": "The Ellerys",
+  "asOf": "2026-10-11",
+  "synthetic": true,
+  "documents": {
+    "trust": {
+      "title": "Ellery Family Revocable Trust",
+      "short": "Trust",
+      "kind": "Trust agreement",
+      "date": "2019-04-12"
+    },
+    "will-sam": {
+      "title": "Last Will of Sam Ellery (pour-over), naming Ohio as his home",
+      "short": "Sam's will",
+      "kind": "Will",
+      "date": "2019-04-12"
+    },
+    "deed-home": {
+      "title": "General warranty deed, 40 Hillside Road, to the trustees",
+      "short": "Home deed",
+      "kind": "Deed",
+      "date": "2019-05-02"
+    },
+    "elm-assign": {
+      "title": "Assignment of membership interest in Elm Street Rentals LLC, admitting the trust as member",
+      "short": "Assignment",
+      "kind": "Assignment",
+      "date": "2019-05-20"
+    },
+    "elm-oa": {
+      "title": "Elm Street Rentals LLC operating agreement",
+      "short": "Elm LLC agreement",
+      "kind": "Operating agreement",
+      "date": "2018-02-01"
+    },
+    "birch-oa": {
+      "title": "Birch Avenue LLC operating agreement",
+      "short": "Birch LLC agreement",
+      "kind": "Operating agreement",
+      "date": "2022-06-15"
+    },
+    "brokerage-stmt": {
+      "title": "Joint brokerage statement, September 2026",
+      "short": "Brokerage statement",
+      "kind": "Account statement",
+      "date": "2026-09-30"
+    },
+    "401k-form": {
+      "title": "401(k) beneficiary confirmation",
+      "short": "401(k) beneficiary form",
+      "kind": "Beneficiary designation",
+      "date": "2021-01-08"
+    },
+    "401k-stmt": {
+      "title": "401(k) statement, Q3 2026",
+      "short": "401(k) statement",
+      "kind": "Account statement",
+      "date": "2026-09-30"
+    },
+    "policy": {
+      "title": "Term life policy on Sam Ellery",
+      "short": "Policy",
+      "kind": "Insurance policy",
+      "date": "2020-03-11"
+    },
+    "ira-stmt": {
+      "title": "Dana's IRA statement, Q3 2026",
+      "short": "IRA statement",
+      "kind": "Account statement",
+      "date": "2026-09-30"
+    },
+    "appraisals": {
+      "title": "Property valuations and loan statements, 2026",
+      "short": "Valuations",
+      "kind": "Valuation",
+      "date": "2026-08-15"
+    },
+    "deed-birch": {
+      "title": "Limited warranty deed, 22 Birch Avenue, to Birch Avenue LLC",
+      "short": "Birch deed",
+      "kind": "Deed",
+      "date": "2022-07-01"
+    },
+    "deed-elm": {
+      "title": "General warranty deed, 1418 Elm Street, to Elm Street Rentals LLC",
+      "short": "Elm deed",
+      "kind": "Deed",
+      "date": "2018-03-05"
+    }
+  },
+  "parties": {
+    "sam": {
+      "kind": "person",
+      "name": "Sam Ellery",
+      "short": "Sam",
+      "will": {
+        "kind": "pour-over",
+        "residueTo": "trust",
+        "source": {
+          "doc": "will-sam",
+          "at": "Art. 3"
+        }
+      },
+      "marital": {
+        "status": "married",
+        "filing": "joint",
+        "source": {
+          "doc": "trust",
+          "at": "p. 1"
+        }
+      }
+    },
+    "dana": {
+      "kind": "person",
+      "name": "Dana Ellery",
+      "short": "Dana",
+      "marital": {
+        "status": "married",
+        "filing": "joint",
+        "source": {
+          "doc": "trust",
+          "at": "p. 1"
+        }
+      },
+      "will": {
+        "source": {
+          "status": "unknown",
+          "note": "Dana’s will isn’t in the documents"
+        }
+      }
+    },
+    "trust": {
+      "kind": "trust",
+      "name": "Ellery Family Revocable Trust",
+      "short": "The family trust",
+      "since": "2019",
+      "trust": {
+        "revocable": true,
+        "grantors": [
+          "sam",
+          "dana"
+        ],
+        "trustees": [
+          "sam",
+          "dana"
+        ],
+        "onDeath": {
+          "first": "continues",
+          "trusteeAfter": "survivor",
+          "source": {
+            "doc": "trust",
+            "at": "Art. 6"
+          }
+        }
+      },
+      "source": {
+        "doc": "trust",
+        "at": "p. 1"
+      }
+    },
+    "elmllc": {
+      "kind": "llc",
+      "name": "Elm Street Rentals LLC",
+      "short": "Elm Street LLC",
+      "since": "2018",
+      "source": {
+        "doc": "elm-oa",
+        "at": "p. 1"
+      },
+      "llc": {
+        "onMemberDeath": "estate",
+        "source": {
+          "doc": "elm-oa",
+          "at": "§ 9.2"
+        }
+      }
+    },
+    "birchllc": {
+      "kind": "llc",
+      "name": "Birch Avenue LLC",
+      "short": "Birch Avenue LLC",
+      "since": "2022",
+      "source": {
+        "doc": "birch-oa",
+        "at": "p. 1"
+      },
+      "llc": {
+        "onMemberDeath": "estate",
+        "source": {
+          "doc": "birch-oa",
+          "at": "§ 9.2"
+        }
+      }
+    }
+  },
+  "assets": {
+    "home": {
+      "kind": "home",
+      "name": "Family home",
+      "detail": "40 Hillside Road",
+      "value": {
+        "usd": 1600000,
+        "basis": "equity, no loan",
+        "source": {
+          "doc": "appraisals"
+        }
+      }
+    },
+    "elm": {
+      "kind": "rental",
+      "name": "1418 Elm Street",
+      "detail": "Fourplex",
+      "value": {
+        "usd": 1100000,
+        "basis": "equity after loan",
+        "source": {
+          "doc": "appraisals"
+        }
+      }
+    },
+    "birch": {
+      "kind": "rental",
+      "name": "22 Birch Avenue",
+      "detail": "Duplex",
+      "value": {
+        "usd": 740000,
+        "basis": "equity after loan",
+        "source": {
+          "doc": "appraisals"
+        }
+      }
+    },
+    "brokerage": {
+      "kind": "brokerage",
+      "name": "Joint brokerage",
+      "detail": "Taxable account",
+      "value": {
+        "usd": 480000,
+        "source": {
+          "doc": "brokerage-stmt"
+        }
+      }
+    },
+    "k401": {
+      "kind": "retirement",
+      "name": "Sam’s 401(k)",
+      "value": {
+        "usd": 910000,
+        "source": {
+          "doc": "401k-stmt"
+        }
+      },
+      "designation": {
+        "primary": [
+          {
+            "to": "dana",
+            "share": 1
+          }
+        ],
+        "contingent": [
+          {
+            "to": "trust",
+            "share": 1
+          }
+        ],
+        "source": {
+          "doc": "401k-form"
+        }
+      },
+      "taxTreatment": "pre-tax"
+    },
+    "life": {
+      "kind": "insurance",
+      "name": "Term life on Sam",
+      "detail": "20-year term",
+      "value": {
+        "usd": 2000000,
+        "basis": "death benefit",
+        "source": {
+          "doc": "policy",
+          "at": "p. 2"
+        }
+      },
+      "insures": "sam",
+      "designation": {
+        "primary": [
+          {
+            "to": "trust",
+            "share": 1
+          }
+        ],
+        "source": {
+          "doc": "policy",
+          "at": "p. 4"
+        }
+      }
+    },
+    "ira": {
+      "kind": "retirement",
+      "name": "Dana’s IRA",
+      "value": {
+        "usd": 390000,
+        "source": {
+          "doc": "ira-stmt"
+        }
+      },
+      "designation": {
+        "source": {
+          "status": "unknown",
+          "note": "No beneficiary form in the documents"
+        }
+      },
+      "taxTreatment": "pre-tax"
+    }
+  },
+  "holdings": [
+    {
+      "holder": "trust",
+      "held": "home",
+      "share": 1,
+      "source": {
+        "doc": "deed-home",
+        "at": "p. 1"
+      }
+    },
+    {
+      "holder": "trust",
+      "held": "elmllc",
+      "share": 1,
+      "source": {
+        "doc": "elm-assign",
+        "at": "p. 1"
+      }
+    },
+    {
+      "holder": "elmllc",
+      "held": "elm",
+      "share": 1,
+      "source": {
+        "doc": "deed-elm",
+        "at": "p. 1"
+      }
+    },
+    {
+      "holder": "sam",
+      "held": "birchllc",
+      "share": 1,
+      "source": {
+        "doc": "birch-oa",
+        "at": "Sched. A"
+      }
+    },
+    {
+      "holder": "birchllc",
+      "held": "birch",
+      "share": 1,
+      "source": {
+        "doc": "deed-birch",
+        "at": "p. 1"
+      }
+    },
+    {
+      "holders": [
+        "sam",
+        "dana"
+      ],
+      "form": "joint-survivorship",
+      "held": "brokerage",
+      "source": {
+        "doc": "brokerage-stmt",
+        "at": "p. 1"
+      }
+    },
+    {
+      "holder": "sam",
+      "held": "k401",
+      "share": 1,
+      "source": {
+        "doc": "401k-stmt"
+      }
+    },
+    {
+      "holder": "sam",
+      "held": "life",
+      "share": 1,
+      "source": {
+        "doc": "policy",
+        "at": "p. 1"
+      }
+    },
+    {
+      "holder": "dana",
+      "held": "ira",
+      "share": 1,
+      "source": {
+        "doc": "ira-stmt"
+      }
+    }
+  ],
+  "events": {
+    "sam-dies": {
+      "kind": "death",
+      "who": "sam",
+      "survivors": [
+        "dana"
+      ]
+    }
+  },
+  "views": [
+    {
+      "id": "structure",
+      "type": "structure",
+      "fig": 2,
+      "title": "The LLC that owns one rental is still in Sam’s name, outside the trust.",
+      "subtitle": "If Sam dies, that rental goes through probate court before it reaches the trust. Everything in the Ellerys’ documents is drawn here by whose name it is in.",
+      "place": {
+        "sam": [
+          1.5,
+          0
+        ],
+        "dana": [
+          4.35,
+          0
+        ],
+        "k401": [
+          0,
+          1
+        ],
+        "life": [
+          1,
+          1
+        ],
+        "birchllc": [
+          2,
+          1
+        ],
+        "trust": [
+          4.35,
+          1
+        ],
+        "brokerage": [
+          5.85,
+          1
+        ],
+        "ira": [
+          6.85,
+          1
+        ],
+        "birch": [
+          2,
+          2
+        ],
+        "home": [
+          3.85,
+          2
+        ],
+        "elmllc": [
+          4.85,
+          2
+        ],
+        "elm": [
+          4.85,
+          3
+        ]
+      },
+      "zones": [
+        {
+          "id": "in-trust",
+          "label": "Held through the trust",
+          "members": [
+            "trust",
+            "home",
+            "elmllc",
+            "elm"
+          ],
+          "tone": "ok"
+        }
+      ],
+      "notes": [
+        {
+          "on": "birchllc",
+          "tone": "flag",
+          "title": "No assignment of Birch Avenue LLC to the trust is in the documents.",
+          "body": "It was formed in 2022, three years after the trust. Its agreement lists Sam as the only member (Sched. A) and its § 9.2, on a member’s death, names no successor. Unless a general assignment in the trust reaches it, it goes through probate when Sam dies. Before assigning it, the estate attorney checks the operating agreement and the loan, since a transfer can need the lender’s consent."
+        },
+        {
+          "on": "ira",
+          "tone": "ask",
+          "title": "The documents don’t show a beneficiary for Dana’s IRA.",
+          "body": "Ask the custodian for the current designation, so the plan on paper matches what would actually happen."
+        }
+      ],
+      "gaps": [
+        {
+          "from": "birchllc",
+          "zone": "in-trust",
+          "label": "No assignment on file"
+        }
+      ],
+      "kicker": "If you have a living trust and formed anything after it",
+      "law": "Ownership as shown by deeds, operating agreements and account records. Ohio is a common-law property state, so title decides ownership between spouses."
+    },
+    {
+      "id": "first-death",
+      "type": "transfer",
+      "fig": 1,
+      "event": "sam-dies",
+      "title": "When Sam dies, one rental would likely go through probate court.",
+      "subtitle": "How each thing in these documents that Sam owns or controls would pass if Sam dies first and Dana survives. Only the LLC needs a court, unless a general assignment in the trust reaches it.",
+      "recipients": [
+        "dana",
+        "trust"
+      ],
+      "order": [
+        "brokerage",
+        "k401",
+        "life",
+        "home",
+        "elmllc",
+        "birchllc"
+      ],
+      "notes": [
+        {
+          "on": "birchllc",
+          "tone": "flag",
+          "title": "Probate is the one route here that runs through a court.",
+          "body": "Sam’s will leaves Birch Avenue LLC to the trust, but only after probate: a public court process with costs paid from the estate first. In Ohio the creditor claim period alone is six months. Until an executor is appointed, no one may have clear authority to run the rental. Fig. 2 shows why it is outside the trust."
+        },
+        {
+          "on": "trust",
+          "tone": "info",
+          "title": "“No court” is not “nothing to do.”",
+          "body": "Under trust Art. 6 the whole trust continues with Dana as sole trustee; many joint trusts instead split at a first death. A death still brings notices, date-of-death values and possibly an estate tax return to keep Sam’s unused exemption. Which part counts as Sam’s, for the basis step-up and estate tax, depends on the trust’s terms and who contributed what."
+        },
+        {
+          "on": "dana",
+          "tone": "ask",
+          "title": "Any form that names Sam needs a new beneficiary.",
+          "body": "After Sam’s death, Dana updates every beneficiary form that names Sam. Her IRA’s designation isn’t in the documents, so it is the first one to check."
+        }
+      ],
+      "bands": [
+        "title",
+        "contract",
+        "trust",
+        "probate"
+      ],
+      "kicker": "If you have a trust, a will and beneficiary forms",
+      "fixes": {
+        "birchllc": "assign the LLC to the trust, after the attorney checks the operating agreement and the loan."
+      },
+      "law": "How property passes at a death by title, beneficiary designation, trust terms and will; Ohio estate administration (Ohio Revised Code ch. 2113 to 2117)."
+    }
+  ],
+  "jurisdiction": {
+    "state": "Ohio",
+    "communityProperty": false,
+    "label": "Ohio, not a community-property state",
+    "source": {
+      "doc": "will-sam",
+      "at": "Art. 1"
+    }
+  },
+  "notInDocuments": [
+    "Dana’s will",
+    "Durable financial powers of attorney for Sam and Dana (someone must be able to sign for Sam if Sam can’t)",
+    "Health care directives",
+    "A record of who contributed what to the joint trust"
+  ]
+}

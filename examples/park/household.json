@@ -1,0 +1,321 @@
+{
+  "kind": "belongs-to/household@1",
+  "household": "The Parks",
+  "asOf": "2026-10-11",
+  "synthetic": true,
+  "jurisdiction": {
+    "state": "Colorado",
+    "communityProperty": false,
+    "label": "Colorado, not a community-property state",
+    "source": { "doc": "01-intake-notes.md", "at": "p. 1" }
+  },
+  "documents": {
+    "01-intake-notes.md": {
+      "title": "Intake notes, the Park household, taken by phone",
+      "short": "Intake notes",
+      "kind": "Intake notes",
+      "date": "2026-10-04"
+    },
+    "02-401k-statement-q3-2026.md": {
+      "title": "Frontier Health 401(k) statement, Q3 2026, with the beneficiary designation on file",
+      "short": "401(k) statement",
+      "kind": "Account statement",
+      "date": "2026-09-30"
+    },
+    "03-roth-ira-statement-q3-2026.md": {
+      "title": "Summit Brokerage Roth IRA statement, Q3 2026, with the account profile",
+      "short": "Roth IRA statement",
+      "kind": "Account statement",
+      "date": "2026-09-30"
+    },
+    "04-joint-brokerage-statement-sept-2026.md": {
+      "title": "Summit Brokerage joint account statement, September 2026",
+      "short": "Brokerage statement",
+      "kind": "Account statement",
+      "date": "2026-09-30"
+    },
+    "05-deed-914-josephine.md": {
+      "title": "Warranty deed, 914 Josephine Street, to Jordan and Casey as joint tenants with right of survivorship",
+      "short": "Home deed",
+      "kind": "Deed",
+      "date": "2021-06-11"
+    },
+    "06-home-value-and-mortgage-oct-2026.md": {
+      "title": "Rockridge Realty market analysis of 914 Josephine Street and the Pinnacle mortgage statement, October 2026",
+      "short": "Home value and loan",
+      "kind": "Valuation and loan statement",
+      "date": "2026-10-02"
+    },
+    "07-term-life-policy.md": {
+      "title": "Meridian Life level term policy on Jordan Park, TL-88-204517",
+      "short": "Policy",
+      "kind": "Insurance policy",
+      "date": "2021-05-20"
+    },
+    "08-vehicle-title-and-value.md": {
+      "title": "Colorado certificate of title, 2022 Subaru Outback, with a Kelley Blue Book value lookup",
+      "short": "Car title",
+      "kind": "Vehicle title",
+      "date": "2022-08-02"
+    },
+    "09-checking-statement-sept-2026.md": {
+      "title": "First Range Bank checking statement, September 2026",
+      "short": "Checking statement",
+      "kind": "Account statement",
+      "date": "2026-09-30"
+    },
+    "10-403b-statement-q3-2026.md": {
+      "title": "Denver Public Schools 403(b) statement, Q3 2026, with the beneficiary designation on file",
+      "short": "403(b) statement",
+      "kind": "Account statement",
+      "date": "2026-09-30"
+    }
+  },
+  "parties": {
+    "jordan": {
+      "kind": "person",
+      "name": "Jordan Park",
+      "short": "Jordan",
+      "marital": { "status": "married", "filing": "joint", "source": { "doc": "01-intake-notes.md", "at": "p. 1" } },
+      "will": { "none": true, "source": { "doc": "01-intake-notes.md", "at": "p. 1" } }
+    },
+    "casey": {
+      "kind": "person",
+      "name": "Casey Park",
+      "short": "Casey",
+      "marital": { "status": "married", "filing": "joint", "source": { "doc": "01-intake-notes.md", "at": "p. 1" } },
+      "will": { "none": true, "source": { "doc": "01-intake-notes.md", "at": "p. 1" } }
+    },
+    "mia": {
+      "kind": "person",
+      "name": "Mia Park",
+      "short": "Mia",
+      "role": "Daughter, age 6"
+    }
+  },
+  "assets": {
+    "k401": {
+      "kind": "retirement",
+      "name": "Jordan’s 401(k)",
+      "detail": "Frontier Health plan, pre-tax",
+      "value": { "usd": 312400.18, "source": { "doc": "02-401k-statement-q3-2026.md", "at": "p. 1" } },
+      "designation": {
+        "primary": [{ "to": "casey", "share": 1 }],
+        "contingent": [],
+        "source": { "doc": "02-401k-statement-q3-2026.md", "at": "p. 2" }
+      },
+      "taxTreatment": "pre-tax"
+    },
+    "roth": {
+      "kind": "retirement",
+      "name": "Jordan’s Roth IRA",
+      "detail": "Summit Brokerage",
+      "value": { "usd": 88920.55, "source": { "doc": "03-roth-ira-statement-q3-2026.md", "at": "p. 1" } },
+      "designation": {
+        "primary": [],
+        "source": { "doc": "03-roth-ira-statement-q3-2026.md", "at": "p. 2" }
+      }
+    },
+    "brokerage": {
+      "kind": "brokerage",
+      "name": "Joint brokerage",
+      "detail": "Summit Brokerage, taxable",
+      "value": { "usd": 64210.4, "source": { "doc": "04-joint-brokerage-statement-sept-2026.md", "at": "p. 1" } }
+    },
+    "home": {
+      "kind": "home",
+      "name": "Family home",
+      "detail": "914 Josephine Street, Denver",
+      "value": {
+        "usd": 282850,
+        "basis": "equity after the loan",
+        "source": { "doc": "06-home-value-and-mortgage-oct-2026.md", "at": "p. 1 and p. 2" }
+      }
+    },
+    "life": {
+      "kind": "insurance",
+      "name": "Term life on Jordan",
+      "detail": "Meridian, 20-year level term",
+      "value": { "usd": 750000, "basis": "death benefit", "source": { "doc": "07-term-life-policy.md", "at": "p. 1" } },
+      "insures": "jordan",
+      "designation": {
+        "primary": [{ "to": "casey", "share": 1 }],
+        "contingent": [{ "to": "mia", "share": 1 }],
+        "source": { "doc": "07-term-life-policy.md", "at": "p. 3" }
+      }
+    },
+    "car": {
+      "kind": "vehicle",
+      "name": "2022 Subaru Outback",
+      "detail": "Colorado title, no lien",
+      "value": { "usd": 24100, "basis": "private-party value", "source": { "doc": "08-vehicle-title-and-value.md", "at": "attachment" } }
+    },
+    "checking": {
+      "kind": "bank account",
+      "name": "Jordan’s checking",
+      "detail": "First Range Bank, individual",
+      "value": { "usd": 18310.72, "source": { "doc": "09-checking-statement-sept-2026.md", "at": "p. 1" } },
+      "designation": {
+        "primary": [],
+        "source": { "doc": "09-checking-statement-sept-2026.md", "at": "p. 1" }
+      }
+    },
+    "k403": {
+      "kind": "retirement",
+      "name": "Casey’s 403(b)",
+      "detail": "Denver Public Schools plan, pre-tax",
+      "value": { "usd": 141030, "source": { "doc": "10-403b-statement-q3-2026.md", "at": "p. 1" } },
+      "designation": {
+        "primary": [{ "to": "jordan", "share": 1 }],
+        "contingent": [],
+        "source": { "doc": "10-403b-statement-q3-2026.md", "at": "p. 2" }
+      },
+      "taxTreatment": "pre-tax"
+    }
+  },
+  "holdings": [
+    { "holder": "jordan", "held": "k401", "share": 1, "source": { "doc": "02-401k-statement-q3-2026.md", "at": "p. 1" } },
+    { "holder": "jordan", "held": "roth", "share": 1, "source": { "doc": "03-roth-ira-statement-q3-2026.md", "at": "p. 1" } },
+    { "holders": ["jordan", "casey"], "form": "joint-survivorship", "held": "brokerage", "source": { "doc": "04-joint-brokerage-statement-sept-2026.md", "at": "p. 1" } },
+    { "holders": ["jordan", "casey"], "form": "joint-survivorship", "held": "home", "source": { "doc": "05-deed-914-josephine.md", "at": "p. 1" } },
+    { "holder": "jordan", "held": "life", "share": 1, "source": { "doc": "07-term-life-policy.md", "at": "p. 1" } },
+    { "holder": "jordan", "held": "car", "share": 1, "source": { "doc": "08-vehicle-title-and-value.md", "at": "p. 1" } },
+    { "holder": "jordan", "held": "checking", "share": 1, "source": { "doc": "09-checking-statement-sept-2026.md", "at": "p. 1" } },
+    { "holder": "casey", "held": "k403", "share": 1, "source": { "doc": "10-403b-statement-q3-2026.md", "at": "p. 1" } }
+  ],
+  "events": {
+    "jordan-dies": { "kind": "death", "who": "jordan", "survivors": ["casey"] }
+  },
+  "views": [
+    {
+      "id": "structure",
+      "type": "structure",
+      "fig": 1,
+      "title": "The Roth IRA, the checking account and the car are in Jordan’s name alone, with no one named to receive them.",
+      "subtitle": "Everything else in the Parks’ documents is joint with Casey or names Casey on a form. There is no will and no trust, so those three things would go through probate court, and Colorado’s intestacy law would decide who gets them.",
+      "place": {
+        "jordan": [2.05, 0],
+        "casey": [6.6, 0],
+        "roth": [0, 1],
+        "checking": [1, 1],
+        "car": [2, 1],
+        "k401": [3.1, 1],
+        "life": [4.1, 1],
+        "brokerage": [5.1, 1],
+        "home": [6.1, 1],
+        "k403": [7.2, 1]
+      },
+      "zones": [
+        {
+          "id": "no-court",
+          "label": "No probate",
+          "members": ["k401", "life", "brokerage", "home"],
+          "tone": "ok"
+        }
+      ],
+      "notes": [
+        {
+          "on": "jordan",
+          "tone": "flag",
+          "title": "Neither Jordan nor Casey has a will, so state law fills the gap.",
+          "body": "Intake notes, p. 1: no will, no trust. Anything that reaches probate goes to whoever Colorado’s intestacy law names, in shares the state sets, and this figure does not work those out. With a six-year-old, a will is also where a guardian for Mia is named. The estate attorney prepares the wills and can say whether a trust would help."
+        },
+        {
+          "on": "roth",
+          "tone": "flag",
+          "title": "The Roth IRA names no beneficiary, so it would go through probate.",
+          "body": "Roth IRA statement, p. 2: no beneficiary on file, and the custodial agreement then pays the account to Jordan’s estate. An estate usually has fewer withdrawal options than a named spouse; the CPA confirms what that costs. The fix is a beneficiary form with Summit Brokerage, naming Casey and a backup for Mia, which the financial planner or estate attorney can help choose."
+        },
+        {
+          "on": "checking",
+          "tone": "flag",
+          "title": "The checking account is in Jordan’s name alone, with no payable-on-death designation.",
+          "body": "Checking statement, p. 1: individual ownership, no payable-on-death designation on file. Casey could not use the money until a court appoints a personal representative, and with no will, state law decides who gets it. A payable-on-death form from First Range Bank, or adding Casey as a joint owner, fixes it; the estate attorney can say which is better."
+        },
+        {
+          "on": "car",
+          "tone": "flag",
+          "title": "The car is titled to Jordan alone, so it would also wait for a court.",
+          "body": "Car title, p. 1: owner Jordan, no co-owner, no lienholder. Colorado has simplified procedures for vehicles and small estates that this figure does not model; the estate attorney or the county motor vehicle office can say whether one applies. Adding Casey to the title is the usual fix."
+        },
+        {
+          "on": "k401",
+          "tone": "info",
+          "title": "The 401(k) names Casey and no one after her.",
+          "body": "401(k) statement, p. 2: primary Casey, contingent none on file. That works if Casey survives Jordan. If not, the plan’s own default rules decide, and this figure does not model them. Adding a contingent closes the gap; benefits for a minor usually need a custodian or a trust named, which the estate attorney sets up."
+        },
+        {
+          "on": "k403",
+          "tone": "info",
+          "title": "Casey’s 403(b) names Jordan, with no one after him.",
+          "body": "403(b) statement, p. 2: primary Jordan, contingent none on file. If Jordan dies first, Casey updates this form; if Casey dies first, the plan’s default rules decide. Adding a contingent now, with the planner, avoids both."
+        },
+        {
+          "on": "life",
+          "tone": "info",
+          "title": "Mia, age 6, is the backup beneficiary on the $750K policy.",
+          "body": "Policy, p. 3: Casey first, then Mia. If Casey were not living, the benefit would be payable to a minor, which, as the policy itself warns, usually means a court-appointed conservator or a custodian under the Uniform Transfers to Minors Act. The estate attorney can say whether a trust for Mia should be named instead."
+        }
+      ],
+      "kicker": "If you have beneficiary forms and joint accounts but no will",
+      "law": "Ownership as shown by the deed, the title and the account records. Colorado is not a community-property state, so title decides ownership between spouses."
+    },
+    {
+      "id": "jordan-dies",
+      "type": "transfer",
+      "fig": 2,
+      "event": "jordan-dies",
+      "title": "If Jordan dies, $1.41M reaches Casey with no court, and $131K waits for probate with no will to say who gets it.",
+      "subtitle": "How each thing in these documents that Jordan owns would pass if Jordan dies and Casey survives. Probate is the public court process that settles what a person held in their own name with no form or co-owner; with no will, Colorado’s intestacy law then decides who receives it.",
+      "recipients": ["casey", "intestacy"],
+      "order": ["k401", "life", "brokerage", "home", "roth", "checking", "car"],
+      "bands": ["contract", "title", "probate"],
+      "notes": [
+        {
+          "on": "roth",
+          "tone": "flag",
+          "title": "The Roth IRA is the largest thing that waits for a court.",
+          "body": "Its form names no one (Roth IRA statement, p. 2), so the custodian pays the estate. Until a court appoints a personal representative, no one can act on the $89K, and the estate has fewer withdrawal options than Casey would have as the named beneficiary; the CPA confirms. A beneficiary form with Summit Brokerage fixes it."
+        },
+        {
+          "on": "checking",
+          "tone": "flag",
+          "title": "The everyday account would be frozen until a court acts.",
+          "body": "Checking statement, p. 1: individual ownership, no payable-on-death designation. A payable-on-death form at First Range Bank, or adding Casey as a joint owner, keeps it out of court; the estate attorney can say which fits."
+        },
+        {
+          "on": "car",
+          "tone": "flag",
+          "title": "The car waits too, unless a simplified procedure applies.",
+          "body": "Car title, p. 1: Jordan alone, no co-owner. Colorado’s simplified procedures for vehicles and small estates are not modeled here; the estate attorney or the county motor vehicle office can say whether one applies. Adding Casey to the title is the usual fix."
+        },
+        {
+          "on": "intestacy",
+          "tone": "info",
+          "title": "“Whoever state law names” is not worked out here.",
+          "body": "Colorado’s intestacy statute sets the shares between a surviving spouse and children, and the answer turns on facts such as whether every child of Jordan is also Casey’s. This figure does not compute it. The estate attorney can, and a will makes the question moot."
+        },
+        {
+          "on": "casey",
+          "tone": "info",
+          "title": "Casey’s own form names Jordan.",
+          "body": "After Jordan’s death, Casey updates the 403(b) designation, which names Jordan with no contingent (403(b) statement, p. 2), and works with the estate attorney on a will that names a guardian and backup beneficiaries for Mia."
+        }
+      ],
+      "fixes": {
+        "roth": "file a beneficiary form with the custodian, after the planner confirms who to name.",
+        "checking": "add a payable-on-death designation at the bank, or a joint owner.",
+        "car": "add Casey to the title, after the attorney checks Colorado’s options."
+      },
+      "kicker": "If you have beneficiary forms and joint accounts but no will",
+      "law": "How property passes at a death by joint title with right of survivorship, beneficiary designation and, with no will, probate under Colorado intestate succession (Colorado Revised Statutes title 15, article 11, part 1). Colorado is not a community-property state."
+    }
+  ],
+  "notInDocuments": [
+    "A will for Jordan or for Casey (the intake notes say neither has one)",
+    "Durable financial powers of attorney and health care directives for Jordan and Casey (the intake notes say none are on file)",
+    "A guardian nomination for Mia",
+    "The 401(k) and 403(b) plans’ default beneficiary rules if no named beneficiary survives",
+    "The Roth IRA custodial agreement (section 9) that the statement cites"
+  ]
+}

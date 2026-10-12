@@ -1,0 +1,538 @@
+{
+  "kind": "belongs-to/household@1",
+  "household": "Maya Okafor",
+  "asOf": "2026-10-11",
+  "synthetic": true,
+  "documents": {
+    "charter": {
+      "title": "Tallgrass Robotics, Inc. certificate of incorporation (Delaware C corporation)",
+      "short": "Charter",
+      "kind": "Charter",
+      "date": "2021-02-22"
+    },
+    "spa": {
+      "title": "Founder stock purchase agreement",
+      "short": "Stock purchase",
+      "kind": "Stock purchase agreement",
+      "date": "2021-03-01"
+    },
+    "captable": {
+      "title": "Tallgrass cap table, issued shares, September 2026",
+      "short": "Cap table",
+      "kind": "Cap table",
+      "date": "2026-09-30"
+    },
+    "holdco-oa": {
+      "title": "Okafor Holdings LLC operating agreement",
+      "short": "LLC agreement",
+      "kind": "Operating agreement",
+      "date": "2021-02-10"
+    },
+    "idgt": {
+      "title": "Okafor 2023 Irrevocable Trust",
+      "short": "Trust",
+      "kind": "Trust agreement",
+      "date": "2023-11-30"
+    },
+    "ada-trust": {
+      "title": "Ada Okafor 2023 Trust",
+      "short": "Trust",
+      "kind": "Trust agreement",
+      "date": "2023-11-30"
+    },
+    "theo-trust": {
+      "title": "Theo Okafor 2023 Trust",
+      "short": "Trust",
+      "kind": "Trust agreement",
+      "date": "2023-11-30"
+    },
+    "gifts": {
+      "title": "Stock assignments and gift tax return (Form 709), 2023",
+      "short": "Gift records",
+      "kind": "Assignment",
+      "date": "2023-12-15"
+    },
+    "loi": {
+      "title": "Illustrative acquisition terms",
+      "short": "Illustrative terms",
+      "kind": "Scenario",
+      "date": "2026-10-11"
+    },
+    "maya-1040": {
+      "title": "Maya’s Form 1040, 2025 (Texas address, filing single)",
+      "short": "Form 1040",
+      "kind": "Tax return",
+      "date": "2026-04-10"
+    },
+    "tax-memo": {
+      "title": "Tax counsel memo on the income-tax status of Okafor Holdings LLC and the 2023 trusts",
+      "short": "Counsel memo",
+      "kind": "Memo",
+      "date": "2023-12-01"
+    },
+    "f1120": {
+      "title": "Tallgrass Form 1120 returns, 2021 to 2025 (no S election)",
+      "short": "Form 1120s",
+      "kind": "Tax return",
+      "date": "2026-04-15"
+    },
+    "election83b": {
+      "title": "Section 83(b) election for the founder shares, March 2021",
+      "short": "83(b) election",
+      "kind": "Tax election",
+      "date": "2021-03-15"
+    }
+  },
+  "parties": {
+    "maya": {
+      "kind": "person",
+      "name": "Maya Okafor",
+      "short": "Maya",
+      "role": "Founder",
+      "marital": {
+        "status": "single",
+        "filing": "single",
+        "source": {
+          "doc": "maya-1040",
+          "at": "p. 1"
+        }
+      }
+    },
+    "holdco": {
+      "kind": "llc",
+      "name": "Okafor Holdings LLC",
+      "short": "Okafor Holdings LLC",
+      "since": "2021",
+      "tax": {
+        "treatedAs": "maya",
+        "label": "Taxed as Maya (disregarded LLC)",
+        "source": {
+          "doc": "tax-memo",
+          "at": "p. 1"
+        }
+      },
+      "source": {
+        "doc": "holdco-oa",
+        "at": "p. 1"
+      }
+    },
+    "idgt": {
+      "kind": "trust",
+      "name": "Okafor 2023 Irrevocable Trust",
+      "short": "Okafor 2023 Trust",
+      "since": "2023",
+      "trust": {
+        "revocable": false,
+        "grantors": [
+          "maya"
+        ]
+      },
+      "tax": {
+        "treatedAs": "maya",
+        "label": "Taxed as Maya (grantor trust)",
+        "source": {
+          "doc": "tax-memo",
+          "at": "p. 2"
+        }
+      },
+      "source": {
+        "doc": "idgt",
+        "at": "p. 1"
+      }
+    },
+    "adatrust": {
+      "kind": "trust",
+      "name": "Ada Okafor 2023 Trust",
+      "short": "Ada’s trust",
+      "since": "2023",
+      "trust": {
+        "revocable": false,
+        "grantors": [
+          "maya"
+        ],
+        "beneficiaryText": "For Ada only (Art. 4)",
+        "beneficiaries": {
+          "primary": [
+            "ada"
+          ],
+          "source": {
+            "doc": "ada-trust",
+            "at": "Art. 4"
+          }
+        },
+        "trustee": {
+          "name": "Rowan Trust Co.",
+          "state": "Texas",
+          "source": {
+            "doc": "ada-trust",
+            "at": "Art. 9"
+          }
+        }
+      },
+      "tax": {
+        "treatedAs": "self",
+        "label": "Taxed on its own (non-grantor)",
+        "source": {
+          "doc": "tax-memo",
+          "at": "p. 3"
+        }
+      },
+      "source": {
+        "doc": "ada-trust",
+        "at": "p. 1"
+      }
+    },
+    "theotrust": {
+      "kind": "trust",
+      "name": "Theo Okafor 2023 Trust",
+      "short": "Theo’s trust",
+      "since": "2023",
+      "trust": {
+        "revocable": false,
+        "grantors": [
+          "maya"
+        ],
+        "beneficiaryText": "For Theo only (Art. 4)",
+        "beneficiaries": {
+          "primary": [
+            "theo"
+          ],
+          "source": {
+            "doc": "theo-trust",
+            "at": "Art. 4"
+          }
+        },
+        "trustee": {
+          "name": "Rowan Trust Co.",
+          "state": "Texas",
+          "source": {
+            "doc": "theo-trust",
+            "at": "Art. 9"
+          }
+        }
+      },
+      "tax": {
+        "treatedAs": "self",
+        "label": "Taxed on its own (non-grantor)",
+        "source": {
+          "doc": "tax-memo",
+          "at": "p. 3"
+        }
+      },
+      "source": {
+        "doc": "theo-trust",
+        "at": "p. 1"
+      }
+    },
+    "others": {
+      "kind": "group",
+      "name": "Investors and employees",
+      "short": "Everyone else",
+      "source": {
+        "doc": "captable"
+      }
+    },
+    "opco": {
+      "kind": "corp",
+      "name": "Tallgrass Robotics, Inc.",
+      "short": "Tallgrass",
+      "since": "2021",
+      "corp": {
+        "type": "C",
+        "shares": 20000000,
+        "source": {
+          "doc": "captable"
+        },
+        "taxSource": {
+          "doc": "f1120",
+          "at": "2021 to 2025; 2026 not yet filed"
+        }
+      },
+      "qsbs": {
+        "cCorp": {
+          "source": {
+            "doc": "f1120",
+            "at": "2021 to 2025; 2026 not yet filed"
+          }
+        },
+        "grossAssets": {
+          "source": {
+            "status": "assumed",
+            "note": "Gross assets of $50M or less at issuance"
+          }
+        },
+        "activeBusiness": {
+          "source": {
+            "status": "assumed",
+            "note": "Active-business test over the holding period"
+          }
+        },
+        "qualifiedField": {
+          "source": {
+            "status": "assumed",
+            "note": "Robotics products, not an excluded field"
+          }
+        },
+        "redemptions": {
+          "source": {
+            "status": "assumed",
+            "note": "No disqualifying redemptions"
+          }
+        },
+        "issued": {
+          "date": "2021-03-01",
+          "source": {
+            "doc": "spa",
+            "at": "p. 1"
+          }
+        }
+      },
+      "source": {
+        "doc": "charter",
+        "at": "p. 1"
+      }
+    }
+  },
+  "assets": {},
+  "holdings": [
+    {
+      "holder": "maya",
+      "held": "holdco",
+      "share": 1,
+      "source": {
+        "doc": "holdco-oa",
+        "at": "Sched. A"
+      }
+    },
+    {
+      "holder": "holdco",
+      "held": "opco",
+      "shares": 3600000,
+      "acquired": {
+        "how": "original issuance",
+        "date": "2021-03-01",
+        "basisPerShare": 0.0001,
+        "source": {
+          "doc": "spa",
+          "at": "§ 1"
+        },
+        "election83b": {
+          "source": {
+            "doc": "election83b"
+          }
+        }
+      },
+      "source": {
+        "doc": "captable"
+      }
+    },
+    {
+      "holder": "idgt",
+      "held": "opco",
+      "shares": 1000000,
+      "acquired": {
+        "how": "gift",
+        "from": "holdco",
+        "date": "2023-12-15",
+        "basisPerShare": 0.0001,
+        "tacksFrom": "2021-03-01",
+        "source": {
+          "doc": "gifts",
+          "at": "p. 2"
+        }
+      },
+      "source": {
+        "doc": "captable"
+      }
+    },
+    {
+      "holder": "adatrust",
+      "held": "opco",
+      "shares": 700000,
+      "acquired": {
+        "how": "gift",
+        "from": "holdco",
+        "date": "2023-12-15",
+        "basisPerShare": 0.0001,
+        "tacksFrom": "2021-03-01",
+        "source": {
+          "doc": "gifts",
+          "at": "p. 3"
+        }
+      },
+      "source": {
+        "doc": "captable"
+      }
+    },
+    {
+      "holder": "theotrust",
+      "held": "opco",
+      "shares": 700000,
+      "acquired": {
+        "how": "gift",
+        "from": "holdco",
+        "date": "2023-12-15",
+        "basisPerShare": 0.0001,
+        "tacksFrom": "2021-03-01",
+        "source": {
+          "doc": "gifts",
+          "at": "p. 4"
+        }
+      },
+      "source": {
+        "doc": "captable"
+      }
+    },
+    {
+      "holder": "others",
+      "held": "opco",
+      "shares": 14000000,
+      "source": {
+        "doc": "captable"
+      }
+    }
+  ],
+  "events": {
+    "sale": {
+      "kind": "sale",
+      "of": "opco",
+      "pricePerShare": 12,
+      "date": "2026-11-15",
+      "source": {
+        "doc": "loi",
+        "status": "illustrative",
+        "note": "Illustrative price for this example"
+      }
+    }
+  },
+  "views": [
+    {
+      "id": "qsbs",
+      "type": "structure",
+      "fig": 3,
+      "title": "At $12 a share, Maya’s kids’ trusts add $16.8M of QSBS exclusion. Maya’s own trust adds none.",
+      "subtitle": "QSBS lets each taxpayer leave up to $10M of gain per company on qualifying startup stock out of federal income tax. Maya created all three trusts. For income tax, Maya’s 2023 trust and LLC count as Maya, so they share one cap; the trusts for Ada and Theo are separate taxpayers, so each has its own.",
+      "place": {
+        "maya": [
+          1,
+          0
+        ],
+        "holdco": [
+          0.5,
+          1
+        ],
+        "idgt": [
+          1.5,
+          1
+        ],
+        "adatrust": [
+          2.75,
+          1
+        ],
+        "theotrust": [
+          3.75,
+          1
+        ],
+        "others": [
+          5,
+          1
+        ],
+        "opco": [
+          2.75,
+          2
+        ]
+      },
+      "relations": [
+        {
+          "from": "maya",
+          "to": "idgt",
+          "kind": "grantor",
+          "label": "Created it"
+        },
+        {
+          "from": "maya",
+          "to": "adatrust",
+          "kind": "grantor",
+          "label": "Created it"
+        },
+        {
+          "from": "maya",
+          "to": "theotrust",
+          "kind": "grantor",
+          "label": "Created it"
+        }
+      ],
+      "zones": [
+        {
+          "id": "tp-maya",
+          "label": "Taxpayer 1 · Maya, for income tax",
+          "members": [
+            "maya",
+            "holdco",
+            "idgt"
+          ],
+          "tone": "group",
+          "taxpayer": "maya"
+        },
+        {
+          "id": "tp-ada",
+          "label": "Taxpayer 2",
+          "members": [
+            "adatrust"
+          ],
+          "tone": "group",
+          "taxpayer": "adatrust"
+        },
+        {
+          "id": "tp-theo",
+          "label": "Taxpayer 3",
+          "members": [
+            "theotrust"
+          ],
+          "tone": "group",
+          "taxpayer": "theotrust"
+        }
+      ],
+      "ledger": {
+        "event": "sale",
+        "kind": "qsbs",
+        "for": [
+          "maya",
+          "adatrust",
+          "theotrust"
+        ]
+      },
+      "notes": [
+        {
+          "on": "idgt",
+          "tone": "info",
+          "title": "The 2023 trust shares Maya’s cap, usually by design.",
+          "body": "It is a grantor trust, so its gain counts against Maya’s $10M. Founders use these to move future growth out of their estate; it adds no QSBS room. Whether to change that before a sale is a question for tax counsel."
+        },
+        {
+          "on": "adatrust",
+          "tone": "info",
+          "title": "Ada’s and Theo’s trusts each get their own cap.",
+          "body": "Gifted QSBS keeps its status and holding period. The IRS can merge trusts that share a grantor and substantially the same beneficiaries when cutting tax was a principal purpose. Art. 4 of each names one different child; the remainder terms need the same check. Their separate status rests on the counsel memo, and a later amendment, swap power or loan could change it."
+        },
+        {
+          "on": "opco",
+          "tone": "ask",
+          "title": "Four conditions aren’t in the documents.",
+          "body": "The $50M asset test, the active-business test, the excluded-field test and the redemption rules are assumed here (see the checklist). Company counsel confirms them before anyone counts on the exclusion."
+        }
+      ],
+      "kicker": "If you hold founder stock in a C corporation",
+      "law": "IRC § 1202, as amended July 4, 2025 · § 643(f) · §§ 671 to 679 (grantor trusts) · Treas. Reg. § 301.7701-3 (single-member LLCs)"
+    }
+  ],
+  "jurisdiction": {
+    "state": "Texas",
+    "communityProperty": true,
+    "label": "Texas, no state income tax",
+    "source": {
+      "doc": "maya-1040",
+      "at": "p. 1"
+    }
+  }
+}
