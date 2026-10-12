@@ -35,7 +35,9 @@ export function renderTransfer(model, view, { noteBadges }) {
   // Bands in mechanism order, rows inside them in authored order.
   const bands = [];
   let y = headH;
-  for (const route of view.bands ?? ORDER) {
+  const bandList = view.bands ?? ORDER;
+  for (const r of picked) if (!bandList.includes(r.route)) problems.push(`${r.id} passes by "${ROUTES[r.route].label}", but that band is not in view.bands, so it would be left off the drawing`);
+  for (const route of bandList) {
     const rows = picked.filter((r) => r.route === route);
     if (!rows.length) continue;
     const fixes = rows.filter((r) => view.fixes?.[r.id]).length;

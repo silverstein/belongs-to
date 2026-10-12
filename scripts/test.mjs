@@ -8,6 +8,8 @@ import { normalize } from "../kit/model.mjs";
 import { verify } from "../kit/verify.mjs";
 import { deathRoutes, qsbsLedger, anniversary, qsbsRegime } from "../kit/derive.mjs";
 import { renderStructure } from "../kit/structure.mjs";
+import { renderTransfer } from "../kit/transfer.mjs";
+import { renderTransferStacked } from "../kit/transfer-stacked.mjs";
 import { auditLayout } from "../kit/audit.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -296,6 +298,55 @@ test("intake: a partially read document must say which pages", () => {
   const raw = load("ellery");
   raw.documents.trust.read = "partial";
   expectFail(raw, "intake recorded", /readNote does not say which pages/);
+});
+
+// Three findings from an outside review (2026-10-12), each reproduced before the fix.
+test("death: a trust that owns half the home moves half its value, not all of it", () => {
+  const raw = load("ellery");
+  raw.holdings.find((h) => h.held === "home").share = 0.5;
+  raw.holdings.push({ holder: "dana", held: "home", share: 0.5, source: { doc: "deed-home", at: "p. 1" } });
+  const m = normalize(raw);
+  const row = deathRoutes(m, "sam-dies").find((r) => r.id === "home");
+  if (row.value !== 800000) throw new Error(`trust route shows ${row.value}`);
+  for (const render of [renderTransfer, renderTransferStacked]) {
+    const fig = render(m, raw.views[1], { noteBadges: new Map() });
+    const trust = fig.recipients ? fig.recipients.find((r) => r.id === "trust") : null;
+    const stays = (trust?.lines ?? []).find((l) => l.key === "stays");
+    if (trust && stays && stays.amount !== 800000 + 1100000) throw new Error(`${render.name}: trust total ${stays.amount}`);
+  }
+});
+
+test("a beneficiary with no share fails instead of becoming NaN", () => {
+  const raw = load("ellery");
+  delete raw.assets.k401.designation.primary[0].share;
+  expectFail(raw, "ownership adds to 100%", /k401 primary beneficiary dana: share must be/);
+});
+
+for (const [label, value] of [["null", null], ["a string", "50%"], ["zero", 0], ["negative", -0.5], ["over one", 1.5], ["infinite", Infinity]]) {
+  test(`a holding share that is ${label} fails`, () => {
+    const raw = load("ellery");
+    raw.holdings.find((h) => h.held === "home").share = value;
+    const r = verify(normalize(raw));
+    const c = r.checks.find((x) => x.name === "ownership adds to 100%");
+    if (c.passed || !c.problems.some((p) => /trust → home: share must be/.test(p))) throw new Error(c.problems.join("; ") || "passed");
+  });
+}
+
+test("a cap-table share count that is not a whole number fails", () => {
+  const raw = load("okafor");
+  raw.holdings.find((h) => h.holder === "others").shares = 14000000.5;
+  expectFail(raw, "ownership adds to 100%", /shares must be a positive whole number/);
+});
+
+test("a band list that leaves out an affected asset fails the layout audit in both layouts", () => {
+  const raw = load("ellery");
+  raw.views[1].bands = ["title", "contract", "trust"];
+  const m = normalize(raw);
+  for (const render of [renderTransfer, renderTransferStacked]) {
+    const fig = render(m, raw.views[1], { noteBadges: new Map() });
+    const a = auditLayout(fig.geometry);
+    if (a.ok || !a.problems.some((p) => /birchllc .* not in view.bands/.test(p))) throw new Error(`${render.name}: ${a.problems.join("; ") || "passed"}`);
+  }
 });
 
 test("layout audit catches two cards placed on top of each other", () => {

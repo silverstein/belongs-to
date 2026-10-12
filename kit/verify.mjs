@@ -82,8 +82,19 @@ export function verify(model) {
   for (const { source, where } of sources) if (source.status) open.push({ where, status: source.status, note: source.note ?? citeLabel(model, source) });
   check("every fact cited or marked", citeProblems);
 
-  // 3. Ownership closes
+  // 3. Ownership closes. A missing or malformed share would otherwise become NaN
+  // and slip past the sum, so every fraction and share count is checked first.
   const closeProblems = [];
+  const okFraction = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 && v <= 1 + EPS;
+  const okShares = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 && Number.isInteger(v);
+  for (const h of holdings) {
+    if (h.joint) continue;
+    if (h.shares != null) { if (!okShares(h.shares)) closeProblems.push(`holding ${h.holders.join("+")} → ${h.held}: shares must be a positive whole number, got ${JSON.stringify(h.shares)}`); }
+    else if (!okFraction(h.share)) closeProblems.push(`holding ${h.holders.join("+")} → ${h.held}: share must be a number above 0 and at most 1, got ${JSON.stringify(h.share)}`);
+  }
+  for (const node of Object.values(nodes)) for (const tier of ["primary", "contingent"]) for (const e of node.designation?.[tier] ?? []) {
+    if (!okFraction(e.share)) closeProblems.push(`${node.id} ${tier} beneficiary ${e.to}: share must be a number above 0 and at most 1, got ${JSON.stringify(e.share)}`);
+  }
   const heldIds = new Set(holdings.map((h) => h.held));
   for (const id of heldIds) {
     const node = nodes[id];

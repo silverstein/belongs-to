@@ -28,7 +28,9 @@ export function renderTransferStacked(model, view, { noteBadges }) {
   // Bands and rows.
   const bands = [];
   let y = 8;
-  for (const route of view.bands ?? ORDER) {
+  const bandList = view.bands ?? ORDER;
+  for (const r of picked) if (!bandList.includes(r.route)) problems.push(`${r.id} passes by "${ROUTES[r.route].label}", but that band is not in view.bands, so it would be left off the drawing`);
+  for (const route of bandList) {
     const rows = picked.filter((r) => r.route === route);
     if (!rows.length) continue;
     let cy = y + bandHead;

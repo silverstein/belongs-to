@@ -112,8 +112,11 @@ export function deathRoutes(model, eventId) {
     for (const holding of holdingsBy(model, node.id)) {
       const item = model.nodes[holding.held];
       const survivorTrustee = terms?.trusteeAfter === "survivor" ? (event.survivors ?? []).map((id) => shortName(model.nodes[id])).join(" and ") : null;
+      // The trust's share of the item, not the whole item: a trust that owns half the home holds half its value.
+      const wholeValue = valueOf(model, item.id);
+      const trustValue = wholeValue == null || holding.fraction == null ? null : wholeValue * holding.fraction;
       rows.push({
-        id: item.id, item, holding, value: valueOf(model, item.id), route: "trust", to: [{ to: node.id, share: 1 }],
+        id: item.id, item, holding, value: trustValue, route: "trust", to: [{ to: node.id, share: 1 }],
         detail: terms?.first === "continues" ? `Stays in the trust${survivorTrustee ? `, which ${survivorTrustee} now runs` : ""} (${terms.source?.at ?? "trust terms"})` : `Follows the trust’s rules${terms?.source?.at ? ` (${terms.source.at})` : ""}`,
         facts: [holding.source, terms?.source].filter(Boolean),
         via: node.id,
