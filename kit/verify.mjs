@@ -167,7 +167,7 @@ export function verify(model) {
   const absenceProblems = [];
   const unknownNodes = new Set(Object.values(nodes).filter((n) => ["designation", "value", "tax", "will"].some((k) => n[k]?.source?.status === "unknown")).map((n) => n.id));
   for (const view of model.views) for (const note of view.notes ?? []) {
-    if (note.on && unknownNodes.has(note.on) && !/document/i.test(`${note.title} ${note.body}`)) absenceProblems.push(`${view.id}: the note on ${note.on} states a missing fact without saying it is missing from the documents`);
+    if (note.on && unknownNodes.has(note.on) && !/document|on file|paperwork|isn’t in|isn't in|nothing (here|shows)/i.test(`${note.title} ${note.body}`)) absenceProblems.push(`${view.id}: the note on ${note.on} states a missing fact without saying it is missing from the documents`);
     if (/\b(never|everything they own|all they own)\b/i.test(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`)) absenceProblems.push(`${view.id}: "${(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`.match(/\b(never|everything they own|all they own)\b/i) ?? [])[0]}" claims more than the documents can show`);
   }
   check("absence said as absence", [...new Set(absenceProblems)]);

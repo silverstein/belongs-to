@@ -388,8 +388,8 @@
       "id": "structure",
       "type": "structure",
       "fig": 1,
-      "title": "The Roth IRA, the checking account and the car are in Jordan’s name alone, with no one named to receive them.",
-      "subtitle": "Everything else in the Parks’ documents is joint with Casey or names Casey on a form. There is no will and no trust, so those three things would go through probate court, and Colorado’s intestacy law would decide who gets them.",
+      "title": "The Roth IRA, the checking account and the car are in Jordan’s name alone, and no one is named to get them.",
+      "subtitle": "Everything else is joint with Casey or has Casey’s name on a form. There is no will and no trust, so those three things would go to a court first, and Colorado’s default list would decide who gets them.",
       "place": {
         "jordan": [
           2.05,
@@ -449,56 +449,56 @@
         {
           "on": "jordan",
           "tone": "flag",
-          "title": "Neither Jordan nor Casey has a will, so state law fills the gap.",
-          "body": "Intake notes, p. 1: no will, no trust. Anything that reaches probate goes to whoever Colorado’s intestacy law names, in shares the state sets, and this figure does not work those out. With a six-year-old, a will is also where a guardian for Mia is named. The estate attorney prepares the wills and can say whether a trust would help."
+          "title": "Neither Jordan nor Casey has a will.",
+          "body": "The intake notes say so (p. 1). Without one, anything that ends up in court goes to whoever Colorado’s default list names, in shares the state sets. With a six-year-old, a will is also where a guardian for Mia is named."
         },
         {
           "on": "roth",
           "tone": "flag",
-          "title": "The Roth IRA names no beneficiary, so it would go through probate.",
-          "body": "Roth IRA statement, p. 2: no beneficiary on file, and the custodial agreement then pays the account to Jordan’s estate. An estate usually has fewer withdrawal options than a named spouse; the CPA confirms what that costs. The fix is a beneficiary form with Summit Brokerage, naming Casey and a backup for Mia, which the financial planner or estate attorney can help choose."
+          "title": "The Roth IRA has no one named to get it.",
+          "body": "Roth IRA statement, p. 2: no beneficiary on file. Jordan can log in to Summit and name Casey, with Mia as backup. Ten minutes."
         },
         {
           "on": "checking",
           "tone": "flag",
-          "title": "The checking account is in Jordan’s name alone, with no payable-on-death designation.",
-          "body": "Checking statement, p. 1: individual ownership, no payable-on-death designation on file. Casey could not use the money until a court appoints a personal representative, and with no will, state law decides who gets it. A payable-on-death form from First Range Bank, or adding Casey as a joint owner, fixes it; the estate attorney can say which is better."
+          "title": "The checking account is in Jordan’s name alone.",
+          "body": "Checking statement, p. 1: one name, no one listed to get it. Casey couldn’t use it until a court acted. The bank can add Casey as payable-on-death or put both names on it."
         },
         {
           "on": "car",
           "tone": "flag",
-          "title": "The car is titled to Jordan alone, so it would also wait for a court.",
-          "body": "Car title, p. 1: owner Jordan, no co-owner, no lienholder. Colorado has simplified procedures for vehicles and small estates that this figure does not model; the estate attorney or the county motor vehicle office can say whether one applies. Adding Casey to the title is the usual fix."
+          "title": "The car is titled to Jordan alone.",
+          "body": "Car title, p. 1: one owner, no co-owner. Colorado may have a shortcut for vehicles; this page didn’t check. Adding Casey to the title is the usual fix."
         },
         {
           "on": "k401",
           "tone": "info",
-          "title": "The 401(k) names Casey and no one after her.",
-          "body": "401(k) statement, p. 2: primary Casey, contingent none on file. That works if Casey survives Jordan. If not, the plan’s own default rules decide, and this figure does not model them. Adding a contingent closes the gap; benefits for a minor usually need a custodian or a trust named, which the estate attorney sets up."
+          "title": "The 401(k) names Casey, with no backup.",
+          "body": "401(k) statement, p. 2: Casey first, no one after. That works as long as Casey is living. Adding Mia as backup, through a trust or a custodian the attorney sets up, closes the gap."
         },
         {
           "on": "k403",
           "tone": "info",
-          "title": "Casey’s 403(b) names Jordan, with no one after him.",
-          "body": "403(b) statement, p. 2: primary Jordan, contingent none on file. If Jordan dies first, Casey updates this form; if Casey dies first, the plan’s default rules decide. Adding a contingent now, with the planner, avoids both."
+          "title": "Casey’s 403(b) names Jordan, with no backup.",
+          "body": "403(b) statement, p. 2. If Jordan died first, Casey would need to update it. Adding a backup now avoids that."
         },
         {
           "on": "life",
           "tone": "info",
-          "title": "Mia, age 6, is the backup beneficiary on the $750K policy.",
-          "body": "Policy, p. 3: Casey first, then Mia. If Casey were not living, the benefit would be payable to a minor, which, as the policy itself warns, usually means a court-appointed conservator or a custodian under the Uniform Transfers to Minors Act. The estate attorney can say whether a trust for Mia should be named instead."
+          "title": "Mia, age 6, is the backup on the $750K policy.",
+          "body": "Policy, p. 3: Casey first, then Mia. If it ever went to Mia while she is a minor, the money would need a court-appointed guardian or a custodian. The attorney can say whether a trust for Mia should be named instead."
         }
       ],
       "kicker": "If you have beneficiary forms and joint accounts but no will",
-      "law": "Ownership as shown by the deed, the title and the account records. Colorado is not a community-property state, so title decides ownership between spouses."
+      "law": "Who owns what, as the deed, the title and the account records show it. In Colorado, what is in one spouse’s name is that spouse’s."
     },
     {
       "id": "jordan-dies",
       "type": "transfer",
       "fig": 2,
       "event": "jordan-dies",
-      "title": "If Jordan dies, $1.41M reaches Casey with no court, and $131K waits for probate with no will to say who gets it.",
-      "subtitle": "How each thing in these documents that Jordan owns would pass if Jordan dies and Casey survives. Probate is the public court process that settles what a person held in their own name with no form or co-owner; with no will, Colorado’s intestacy law then decides who receives it.",
+      "title": "If Jordan dies, $1.41M goes straight to Casey, and $131K gets stuck in court with no will to say who gets it.",
+      "subtitle": "How each thing in Jordan’s name would get to someone if Jordan died and Casey survived. Probate is the court process that sorts out what a person held in their own name with no form or co-owner. With no will, the state’s default list decides who receives it.",
       "recipients": [
         "casey",
         "intestacy"
@@ -521,41 +521,42 @@
         {
           "on": "roth",
           "tone": "flag",
-          "title": "The Roth IRA is the largest thing that waits for a court.",
-          "body": "Its form names no one (Roth IRA statement, p. 2), so the custodian pays the estate. Until a court appoints a personal representative, no one can act on the $89K, and the estate has fewer withdrawal options than Casey would have as the named beneficiary; the CPA confirms. A beneficiary form with Summit Brokerage fixes it."
+          "title": "The Roth IRA is the biggest thing that would get stuck.",
+          "body": "No one is named on it (Roth IRA statement, p. 2), so the brokerage would pay it to Jordan’s estate, which is the pile of things a court sorts out. Until the court picks someone to be in charge, probably Casey, no one can touch the $89K, and money paid to an estate usually has to come out faster, with more tax. Naming Casey on the form fixes all of that."
         },
         {
           "on": "checking",
           "tone": "flag",
           "title": "The everyday account would be frozen until a court acts.",
-          "body": "Checking statement, p. 1: individual ownership, no payable-on-death designation. A payable-on-death form at First Range Bank, or adding Casey as a joint owner, keeps it out of court; the estate attorney can say which fits."
+          "body": "It is only in Jordan’s name and no one is listed to get it (checking statement, p. 1). Adding Casey as payable-on-death at the bank, or putting both names on the account, keeps it out of court."
         },
         {
           "on": "car",
           "tone": "flag",
-          "title": "The car waits too, unless a simplified procedure applies.",
-          "body": "Car title, p. 1: Jordan alone, no co-owner. Colorado’s simplified procedures for vehicles and small estates are not modeled here; the estate attorney or the county motor vehicle office can say whether one applies. Adding Casey to the title is the usual fix."
+          "title": "The car would wait too, unless Colorado has a shortcut.",
+          "body": "The title is in Jordan’s name alone (car title, p. 1). Colorado has simpler procedures for vehicles and small estates; this page didn’t check whether one applies. Adding Casey to the title is the usual fix."
         },
         {
           "on": "intestacy",
           "tone": "info",
-          "title": "“Whoever state law names” is not worked out here.",
-          "body": "Colorado’s intestacy statute sets the shares between a surviving spouse and children, and the answer turns on facts such as whether every child of Jordan is also Casey’s. This figure does not compute it. The estate attorney can, and a will makes the question moot."
+          "title": "With no will, the state decides, and Mia’s share would be tied up.",
+          "body": "Colorado’s default list usually splits what is left between the spouse and the children. Mia is six, so her part would sit in a court-supervised account until she is an adult. A will makes all of this a non-question, and it is also where someone is named to take care of Mia."
         },
         {
           "on": "casey",
           "tone": "info",
-          "title": "Casey’s own form names Jordan.",
-          "body": "After Jordan’s death, Casey updates the 403(b) designation, which names Jordan with no contingent (403(b) statement, p. 2), and works with the estate attorney on a will that names a guardian and backup beneficiaries for Mia."
+          "title": "Casey’s own 403(b) still names Jordan.",
+          "body": "It names Jordan with no backup (403(b) statement, p. 2). If Jordan died, Casey would need to name someone new, and a will is where a backup for Mia gets named too."
         }
       ],
       "fixes": {
-        "roth": "file a beneficiary form with the custodian, after the planner confirms who to name.",
-        "checking": "add a payable-on-death designation at the bank, or a joint owner.",
-        "car": "add Casey to the title, after the attorney checks Colorado’s options."
+        "roth": "Jordan logs in to Summit and names Casey, with Mia as backup. Ten minutes.",
+        "checking": "At the bank, add Casey as payable-on-death, or add Casey to the account.",
+        "car": "Add Casey to the title, or ask the county office whether a simpler transfer applies.",
+        "casey": "Casey logs in to the Denver Public Schools plan and adds a backup after Jordan. Ten minutes."
       },
       "kicker": "If you have beneficiary forms and joint accounts but no will",
-      "law": "How property passes at a death by joint title with right of survivorship, beneficiary designation and, with no will, probate under Colorado intestate succession (Colorado Revised Statutes title 15, article 11, part 1). Colorado is not a community-property state."
+      "law": "How things pass at a death: joint accounts to the other owner, accounts with a named person to that person, and the rest through probate court. With no will, Colorado’s intestate succession rules (Colorado Revised Statutes title 15, article 11, part 1)."
     }
   ],
   "intake": {
@@ -563,24 +564,29 @@
       {
         "what": "A will for Jordan or for Casey",
         "result": "missing",
-        "note": "the intake notes say neither has one"
+        "note": "you told us neither of you has one",
+        "todo": "Get a will for each of you. It is also where someone is named to raise Mia. An estate attorney does this in one meeting; a basic one is a few hundred dollars."
       },
       {
-        "what": "Durable financial powers of attorney and health care directives",
+        "what": "Something that lets one of you make money or medical decisions for the other if you can’t",
         "result": "missing",
-        "note": "the intake notes say none are on file"
+        "note": "you told us nothing like this is on file",
+        "todo": "Sign powers of attorney and health care directives for each other. The same attorney visit covers this."
       },
       {
-        "what": "A guardian nomination for Mia",
-        "result": "missing"
+        "what": "Someone named in writing to raise Mia",
+        "result": "missing",
+        "note": "the will is where this goes"
       },
       {
-        "what": "The 401(k) and 403(b) plans' default beneficiary rules if no named beneficiary survives",
-        "result": "missing"
+        "what": "The retirement plans’ own rules for what happens if the named person has died",
+        "result": "missing",
+        "note": "the statements don’t include them"
       },
       {
-        "what": "The Roth IRA custodial agreement (section 9) that the statement cites",
-        "result": "missing"
+        "what": "The Roth IRA account agreement the statement refers to",
+        "result": "missing",
+        "note": "it would say exactly what happens with no one named"
       },
       {
         "what": "Beneficiary designation for the Roth IRA",

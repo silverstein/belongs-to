@@ -2,7 +2,7 @@
 // receipt, as one self-contained HTML page (fonts embedded, no network).
 import { fontFaceCss, FAMILIES } from "./fonts.mjs";
 import { esc, listJoin } from "./text.mjs";
-import { citeLabel, missingFromIntake } from "./model.mjs";
+import { citeLabel, missingFromIntake, todosFromIntake, footerMissing } from "./model.mjs";
 
 export const CSS = `
 :root{
@@ -66,6 +66,10 @@ body{font-family:${FAMILIES.sans};-webkit-font-smoothing:antialiased;text-render
 .bt-note.flag{background:linear-gradient(var(--bt-flag-wash),var(--bt-flag-wash))}
 .bt-note-hit{box-shadow:inset 3px 0 0 var(--bt-ink)}
 .bt-node{cursor:pointer}
+.bt-todo{border-top:1px solid var(--bt-rule);padding:22px 36px 26px;background:linear-gradient(var(--bt-flag-wash),var(--bt-flag-wash))}
+.bt-todo h4{margin:0 0 10px;font:600 15px/1 ${FAMILIES.sans};color:var(--bt-flag)}
+.bt-todo ol{margin:0;padding:0 0 0 22px;font:400 15px/1.55 ${FAMILIES.sans};color:var(--bt-ink);max-width:52em}
+.bt-todo li{margin:4px 0;padding-left:4px}
 .bt-foot{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:28px;padding:22px 36px 26px;border-top:1px solid var(--bt-rule);background:var(--bt-plate)}
 .bt-foot h4{margin:0 0 10px;font:500 11px/1 ${FAMILIES.mono};letter-spacing:.08em;text-transform:uppercase;color:var(--bt-ink-3)}
 .bt-sources{margin:0;padding:0;list-style:none;columns:2 260px;column-gap:28px;font:400 12.5px/1.45 ${FAMILIES.sans};color:var(--bt-ink-2)}
@@ -76,7 +80,7 @@ body{font-family:${FAMILIES.sans};-webkit-font-smoothing:antialiased;text-render
 .bt-receipt li{display:flex;gap:8px;margin:0 0 5px}
 .bt-receipt li::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;margin-top:6px;background:var(--bt-ok)}
 .bt-receipt li.open::before{background:var(--bt-ask)}
-.bt-foot.bt-has-missing{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr) minmax(0,1fr)}
+.bt-foot.bt-has-missing{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr)}
 .bt-law{grid-column:1/-1;margin:0;font:400 12px/1.5 ${FAMILIES.sans};color:var(--bt-ink-3)} .bt-law b{font:500 11px ${FAMILIES.mono};letter-spacing:.07em;text-transform:uppercase;margin-right:8px;color:var(--bt-ink-3)}
 .bt-disclaimer{grid-column:1/-1;margin:2px 0 0;padding-top:14px;border-top:1px dashed var(--bt-rule);font:400 12px/1.5 ${FAMILIES.sans};color:var(--bt-ink-3);display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
 .bt-mark{font:500 11px/1.5 ${FAMILIES.mono};letter-spacing:.06em;color:var(--bt-ink-3)}
@@ -271,7 +275,8 @@ function legendSvg(kind) {
 
 export function pageHtml({ model, view, figureSvg, figureWidth, stackedSvg = null, extraSections = [], notes, legend, receipt, sourcesUsed }) {
   const docs = sourcesUsed.map((id) => ({ id, ...model.documents[id] }));
-  const missing = missingFromIntake(model);
+  const missing = footerMissing(model);
+  const todos = [...Object.values(view.fixes ?? {}), ...todosFromIntake(model)];
   const partial = docs.filter((d) => d.read === "partial");
   const asOf = new Date(model.raw.asOf + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   const plateW = Math.max(1040, Math.min(1480, figureWidth + 40));
@@ -288,8 +293,8 @@ ${CSS}</style>
 <body style="--bt-w:${plateW}px;--bt-svg-w:${figureWidth}px">
 <article class="bt-plate" data-view="${esc(view.id)}">
   <header class="bt-head">
-    <div class="bt-fig"><b>Fig. ${esc(view.fig)}</b>${[model.raw.household, model.raw.jurisdiction?.label, model.raw.synthetic ? "Example family" : null].filter(Boolean).map((t) => `<span>${esc(t)}</span>`).join(`<i aria-hidden="true">·</i>`)}</div>
-    <div class="bt-asof">${model.raw.synthetic ? "Made-up documents" : "From the documents below"} · ${esc(asOf)}</div>
+    <div class="bt-fig"><b>Fig. ${esc(view.fig)}</b>${[model.raw.household, model.raw.jurisdiction?.state].filter(Boolean).map((t) => `<span>${esc(t)}</span>`).join(`<i aria-hidden="true">·</i>`)}</div>
+    <div class="bt-asof">${model.raw.synthetic ? "An example family, not real people" : "From your documents"} · ${esc(asOf)}</div>
     ${view.kicker ? `<p class="bt-kicker">${esc(view.kicker)}</p>` : ""}
     <h1 class="bt-title">${esc(view.title)}</h1>
     ${view.subtitle ? `<p class="bt-sub">${esc(view.subtitle)}</p>` : ""}
@@ -299,12 +304,13 @@ ${CSS}</style>
   ${legend?.length ? `<div class="bt-legend">${legend.map((item) => `<span>${legendSvg(item.kind)}${esc(item.text)}</span>`).join("")}</div>` : ""}
   ${extraSections.map((s) => `<div class="bt-section">${s}</div>`).join("")}
   ${notes.length ? `<section class="bt-notes" aria-label="Notes">${notes.map((n) => `<div class="bt-note ${esc(n.tone)}" data-on="${esc(n.on ?? "")}"><h3><span class="bt-letter ${esc(n.tone)}">${esc(n.letter)}</span><span>${esc(n.title)}</span></h3><p>${esc(n.body)}</p></div>`).join("")}</section>` : ""}
+  ${todos.length ? `<section class="bt-todo" aria-label="What to do"><h4>What to do</h4><ol>${todos.map((t) => `<li>${esc(t)}</li>`).join("")}</ol></section>` : ""}
   <footer class="bt-foot${missing.length ? " bt-has-missing" : ""}">
-    <div><h4>Drawn from</h4><ul class="bt-sources">${docs.map((d) => `<li><b>${esc(d.short)}</b>${esc(d.title)}${d.date && !d.title.includes(d.date.slice(0, 4)) ? `, ${esc(d.date.slice(0, 4))}` : ""}${d.read === "partial" ? ` <i>(${esc(d.readNote ?? "read in part")})</i>` : ""}</li>`).join("")}</ul></div>
-    ${missing.length ? `<div class="bt-missing"><h4>Looked for, not found</h4><ul class="bt-sources">${missing.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></div>` : ""}
-    <div><h4>Checked before drawing</h4><ul class="bt-receipt">${receipt.map((r) => `<li class="${r.open ? "open" : ""}">${esc(r.text)}</li>`).join("")}</ul></div>
-    ${view.law ? `<p class="bt-law"><b>Law applied</b> ${esc(view.law)}</p>` : ""}
-    <p class="bt-disclaimer"><span>${model.raw.synthetic ? "A made-up family, for illustration. " : ""}A picture of what the documents say, not legal or tax advice. Your attorney or CPA confirms it.</span><span class="bt-mark">Drawn with belongs-to, an open-source tool with no server · every fact cited</span></p>
+    <div><h4>What we looked at</h4><ul class="bt-sources">${docs.map((d) => `<li><b>${esc(d.short)}</b>${esc(d.title)}${d.date && !d.title.includes(d.date.slice(0, 4)) ? `, ${esc(d.date.slice(0, 4))}` : ""}${d.read === "partial" ? ` <i>(${esc(d.readNote ?? "read in part")})</i>` : ""}</li>`).join("")}</ul></div>
+    ${missing.length ? `<div class="bt-missing"><h4>We looked for these and couldn’t find them</h4><ul class="bt-sources">${missing.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></div>` : ""}
+    <div><h4>How we double-checked</h4><ul class="bt-receipt">${receipt.map((r) => `<li class="${r.open ? "open" : ""}">${esc(r.text)}</li>`).join("")}</ul></div>
+    ${view.law ? `<p class="bt-law"><b>The rules behind this</b> ${esc(view.law)}</p>` : ""}
+    <p class="bt-disclaimer"><span>This shows what your documents say. It isn’t legal or tax advice. The form fixes you can do yourself; for a will or a trust, an attorney should look at this first.</span><span class="bt-mark">Your documents were read by the assistant that made this page, and by nothing else.</span></p>
   </footer>
 </article>
 <script>${SCRIPT}</script>

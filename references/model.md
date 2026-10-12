@@ -53,6 +53,7 @@ The intake record is what the agent looked for, before it modeled anything. It i
 ```
 
 - `result` is `found` (name the `doc`), `missing` or `unreadable`.
+- A missing thing the family would act on (a will, powers of attorney, someone named for a child) carries `todo`: the action in the family's words, for example `"todo": "Get a will, mostly so someone is named to take care of Mia. An estate attorney does this in one meeting."` Entries with `todo` go in the page's "What to do" list with the fixes; entries without stay in the footer under "We looked for these and couldn't find them" (a plan's default rules, a custodial agreement a statement cites).
 - Any fact marked `status: "unknown"` requires a `lookedFor` entry somewhere: the audit refuses an unknown with no record of the search.
 - Write what a careful attorney or CPA would ask for next, not only what the figures needed: wills for both spouses, powers of attorney, plan default rules, the operating agreement's transfer clause, the custodial agreement a statement cites.
 

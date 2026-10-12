@@ -5,7 +5,7 @@
 // writes the pages anyway so you can look at what is wrong.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { loadModel, shortName, missingFromIntake } from "../kit/model.mjs";
+import { loadModel, shortName, footerMissing } from "../kit/model.mjs";
 import { verify } from "../kit/verify.mjs";
 import { renderStructure } from "../kit/structure.mjs";
 import { renderTransfer } from "../kit/transfer.mjs";
@@ -39,17 +39,16 @@ for (const view of model.views) {
   let rendered, stacked = null, legend = [];
   const receipt = [];
   const checkNamed = (name) => facts.checks.find((c) => c.name === name)?.passed;
-  if (checkNamed("ownership adds to 100%")) receipt.push({ text: "Ownership adds to 100% for every entity and asset" });
-  if (checkNamed("every fact cited or marked")) receipt.push({ text: "Every fact cites a document, or says it isn’t in one" });
+  if (checkNamed("every fact cited or marked")) receipt.push({ text: "Every number here points to one of your documents. Where we couldn’t find something, we said so." });
   const openHere = facts.open.filter((o) => o.status !== "illustrative");
   const openLetters = [...new Set(openHere.map((o) => notes.find((n) => n.on === o.where.split(".")[0])?.letter).filter(Boolean))];
-  if (openHere.length) receipt.push({ text: `${openHere.length === 1 ? "One fact" : `${openHere.length} facts`} the documents don’t show, marked rather than guessed${openLetters.length ? ` (${openLetters.length === 1 ? "note" : "notes"} ${openLetters.join(", ")})` : ""}`, open: true });
+  if (openHere.length) receipt.push({ text: `${openHere.length === 1 ? "One thing" : `${openHere.length} things`} the documents don’t answer. We said so instead of guessing${openLetters.length ? ` (${openLetters.length === 1 ? "note" : "notes"} ${openLetters.join(", ")})` : ""}`, open: true });
   const illustrative = facts.open.filter((o) => o.status === "illustrative");
-  const notIn = missingFromIntake(model).length;
+  const notIn = footerMissing(model).length;
   const readCount = Object.values(model.documents).filter((d) => d.read === "read" || d.read === "partial").length;
-  if (checkNamed("intake recorded")) receipt.push({ text: `${readCount} documents read; every citation points into one of them` });
-  if (notIn) receipt.push({ text: `${notIn} ${notIn === 1 ? "thing" : "things"} a careful review looked for and did not find, listed below`, open: true });
-  if (illustrative.length) receipt.push({ text: `The sale price is an example`, open: true });
+  if (checkNamed("intake recorded")) receipt.push({ text: `All ${readCount} documents listed under “What we looked at” were read in full` });
+  if (notIn) receipt.push({ text: `${notIn} ${notIn === 1 ? "thing" : "things"} we looked for and couldn’t find, listed here`, open: true });
+  if (illustrative.length) receipt.push({ text: `The sale price is an example, not a real offer`, open: true });
 
   if (view.type === "structure") {
     rendered = renderStructure(model, view, { noteBadges });
@@ -58,7 +57,7 @@ for (const view of model.views) {
     console.log(`view ${view.id} (stacked): layout audit ${stackedAudit.ok ? "passed" : "FAILED"}`);
     for (const p of stackedAudit.problems) console.log(`      ${p}`);
     if (!stackedAudit.ok) failed = true;
-    legend.push({ kind: "own", text: "Owns (share shown on the line)" });
+    legend.push({ kind: "own", text: "Owns. The share is on the line." });
     if (view.relations?.length) legend.push({ kind: "rel", text: view.relations.map((r) => r.label).filter((v, i, a) => a.indexOf(v) === i).join(" · ") });
     if (view.gaps?.length) legend.push({ kind: "gap", text: view.gaps[0].label });
     for (const zone of view.zones ?? []) if (!legend.find((l) => l.kind === `zone-${zone.tone}`)) legend.push({ kind: `zone-${zone.tone}`, text: zone.taxpayer ? "One taxpayer for income tax" : zone.legend ?? zone.label });
@@ -66,7 +65,7 @@ for (const view of model.views) {
       const assumptionNote = notes.find((n) => n.on === view.ledger.issuer || n.tone === "ask");
       const ledger = renderQsbsLedger(model, { ...view.ledger, assumptionLetter: assumptionNote?.letter }, rendered.width);
       extraSections.push(ledger.svg + ledger.checklist);
-      receipt.push({ text: `Exclusions worked out per taxpayer from the cap table` });
+      receipt.push({ text: `Each taxpayer’s exclusion is worked out from the cap table, not estimated` });
     }
   } else if (view.type === "transfer") {
     rendered = renderTransfer(model, view, { noteBadges });
@@ -75,10 +74,10 @@ for (const view of model.views) {
     console.log(`view ${view.id} (stacked): layout audit ${stackedAudit.ok ? "passed" : "FAILED"}`);
     for (const p of stackedAudit.problems) console.log(`      ${p}`);
     if (!stackedAudit.ok) failed = true;
-    legend = [{ kind: "flow", text: "Arrives without a court (width is value)" }];
-    if (rendered.routes.includes("trust")) legend.push({ kind: "flow-stay", text: "Already the trust’s; nothing moves" });
-    if (rendered.routes.includes("probate")) legend.push({ kind: "flow-court", text: "Waits for probate court" });
-    receipt.push({ text: `Everything in these documents that ${shortName(model.nodes[model.events[view.event].who])} owns or controls is shown (${rendered.rows.length})` });
+    legend = [{ kind: "flow", text: "Goes straight to the person. Thicker means more money." }];
+    if (rendered.routes.includes("trust")) legend.push({ kind: "flow-stay", text: "Already in the trust. Nothing moves." });
+    if (rendered.routes.includes("probate")) legend.push({ kind: "flow-court", text: "Stuck in court first" });
+    receipt.push({ text: `All ${rendered.rows.length} things in ${shortName(model.nodes[model.events[view.event].who])}’s name are on the page, not a selection` });
   } else throw new Error(`Unknown view type ${view.type}`);
 
   const layout = auditLayout(rendered.geometry);

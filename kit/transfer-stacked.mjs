@@ -19,7 +19,7 @@ export function renderTransferStacked(model, view, { noteBadges }) {
 
   const W = 420, M = 14, cardW = 282, gutterX = M + cardW + 14; // lanes live from gutterX to W - M - 6
   const bandHead = 46, baseRowH = 84, rowGap = 10, bandGap = 12, bandPadB = 12;
-  const stationLinesOf = (row) => wrap(ROUTES[row.route].court ? `Probate court first. ${row.detail}` : row.detail, "laneSub", cardW - 54, 2);
+  const stationLinesOf = (row) => wrap(ROUTES[row.route].court ? `Court first. ${row.detail}` : row.detail, "laneSub", cardW - 54, 2);
   const fixLinesOf = (row) => (view.fixes?.[row.id] ? wrap(view.fixes[row.id], "laneSub", cardW - 40, 2) : []);
   const rowHOf = (row) => baseRowH + (stationLinesOf(row).length - 1) * 13;
   const fixHOf = (row) => (fixLinesOf(row).length ? 16 + fixLinesOf(row).length * 15 : 0);
@@ -64,14 +64,14 @@ export function renderTransferStacked(model, view, { noteBadges }) {
     const stays = recip.flows.filter((f) => f.row.route === "trust");
     const court = recip.flows.filter((f) => ROUTES[f.row.route].court);
     const lines = [];
-    if (!known) lines.push({ text: "Total not computed: a value is not in the documents", tone: "ask" });
+    if (!known) lines.push({ text: "No total: one value isn’t in the documents", tone: "ask" });
     else {
-      if (arrives.length) lines.push({ text: `${money(sum(arrives))} arrives, no court`, key: "arrives", amount: sum(arrives), suffix: " arrives, no court" });
-      if (stays.length) lines.push({ text: `${money(sum(stays))} already held, stays put`, key: "stays", amount: sum(stays), suffix: " already held, stays put" });
-      if (court.length) lines.push({ text: `${money(sum(court))} after probate, less costs`, tone: "flag", key: "court", amount: sum(court), suffix: " after probate, less costs" });
+      if (arrives.length) lines.push({ text: `${money(sum(arrives))} with no court`, key: "arrives", amount: sum(arrives), suffix: " with no court" });
+      if (stays.length) lines.push({ text: `${money(sum(stays))} already here, nothing moves`, key: "stays", amount: sum(stays), suffix: " already here, nothing moves" });
+      if (court.length) lines.push({ text: `${money(sum(court))} after court, minus fees`, tone: "flag", key: "court", amount: sum(court), suffix: " after court, minus fees" });
     }
     const survivors = (event.survivors ?? []).map((id) => shortName(model.nodes[id]));
-    const subtitle = recip.node.kind === "law" ? "Usually the spouse and children, in shares the state sets" : recip.node.kind === "person" ? `Claims or keeps it in ${shortName(recip.node)}’s own name` : recip.node.trust?.onDeath?.trusteeAfter === "survivor" ? `${survivors.join(" and ")} becomes sole trustee` : "";
+    const subtitle = recip.node.kind === "law" ? "Usually the spouse and children, split the way the state’s rulebook says" : recip.node.kind === "person" ? `It becomes ${shortName(recip.node)}’s` : recip.node.trust?.onDeath?.trusteeAfter === "survivor" ? `${survivors.join(" and ")} now runs it alone` : "";
     const subtitleLines = subtitle ? wrap(subtitle, "detail", cardW - 28, 2) : [];
     const h = 50 + subtitleLines.length * 16 + lines.length * 20 + 14;
     const box = { ...recip, x: M, y: ry, w: cardW, h, lines, subtitleLines, lane: i };
@@ -125,7 +125,7 @@ export function renderTransferStacked(model, view, { noteBadges }) {
     const { y: ry0, item: node } = row;
     const badges = noteBadges.get(row.id) ?? [];
     const court = ROUTES[row.route].court;
-    const holdText = row.ownedBy ? `Owned by ${row.ownedBy.map((id) => shortName(model.nodes[id])).join(" and ")}` : row.via ? `In ${inSentence(shortName(model.nodes[row.via]))}` : row.holding.joint ? `Joint with ${row.holding.holders.filter((h) => h !== event.who).map((h) => shortName(model.nodes[h])).join(", ")}` : row.route === "contract" ? `${shortName(who)}’s, with a beneficiary form` : row.route === "agreement" ? `${shortName(who)}’s, with a successor named` : node.designation && node.designation.source?.status !== "unknown" && !(node.designation.primary ?? []).length ? `${shortName(who)}’s; the form names no one` : `In ${shortName(who)}’s name alone, no form`;
+    const holdText = row.ownedBy ? `Owned by ${row.ownedBy.map((id) => shortName(model.nodes[id])).join(" and ")}` : row.via ? `In ${inSentence(shortName(model.nodes[row.via]))}` : row.holding.joint ? `Joint with ${row.holding.holders.filter((h) => h !== event.who).map((h) => shortName(model.nodes[h])).join(", ")}` : row.route === "contract" ? `${shortName(who)}’s, and a form says who gets it` : row.route === "agreement" ? `${shortName(who)}’s, and the agreement says who steps in` : node.designation && node.designation.source?.status !== "unknown" && !(node.designation.primary ?? []).length ? `${shortName(who)}’s, and no one is named to get it` : `${shortName(who)}’s alone, and no one is named to get it`;
     out.push(`<g class="bt-node" data-id="${esc(row.id)}" tabindex="0" role="group" aria-label="${esc(node.name)}">`);
     const rowH = row.h;
     out.push(`<rect class="bt-card bt-asset${court ? " bt-t-flag" : ""}" x="${M}" y="${ry0}" width="${cardW}" height="${rowH}" rx="9"/>`);

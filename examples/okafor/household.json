@@ -531,8 +531,8 @@
         {
           "on": "opco",
           "tone": "ask",
-          "title": "Four conditions aren’t in the documents.",
-          "body": "The $50M asset test, the active-business test, the excluded-field test and the redemption rules are assumed here (see the checklist). Company counsel confirms them before anyone counts on the exclusion."
+          "title": "Four things the documents don’t show.",
+          "body": "Whether the company was under the asset limit when the shares were issued, whether it has stayed an active business, whether it is in an excluded field, and whether any shares were bought back around the issuance. Company counsel can confirm all four; the exclusion counts only if they hold."
         }
       ],
       "kicker": "If you hold founder stock in a C corporation",
@@ -551,28 +551,28 @@
   "intake": {
     "lookedFor": [
       {
-        "what": "Proof of the gross-asset test at issuance (balance sheet, March 2021)",
+        "what": "The company’s balance sheet from when the shares were issued (March 2021)",
         "result": "missing",
-        "note": "company counsel can confirm"
+        "note": "it would show whether the company was under the asset limit"
       },
       {
-        "what": "Evidence of the active-business test over the holding period",
+        "what": "Something showing the company has stayed an operating business the whole time",
         "result": "missing"
       },
       {
-        "what": "Any stock redemptions around the 2021 issuance",
+        "what": "Records of any shares the company bought back around the 2021 issuance",
         "result": "missing",
-        "note": "no redemption records were provided"
+        "note": "none were sent"
       },
       {
-        "what": "Form 8832 or a partnership return for Okafor Holdings LLC",
+        "what": "The tax filing that shows how Okafor Holdings LLC is treated",
         "result": "missing",
-        "note": "the counsel memo states disregarded status; no filing was provided"
+        "note": "the counsel memo says it is treated as Maya; no filing was sent"
       },
       {
-        "what": "The 2026 Form 1120",
+        "what": "The company’s 2026 tax return",
         "result": "missing",
-        "note": "not yet filed"
+        "note": "not filed yet"
       },
       {
         "what": "The trusts' remainder provisions",

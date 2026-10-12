@@ -10,12 +10,12 @@ import { measure, wrap, esc, money, inSentence } from "./text.mjs";
 import { icon, iconFor } from "./icons.mjs";
 
 export const BAND_TEXT = {
-  contract: { title: "By beneficiary form", sub: "Paid to whoever the form names, if they survive. No court.", icon: "form" },
-  agreement: { title: "By the LLC agreement", sub: "The agreement names who steps in. No court.", icon: "llc" },
-  title: { title: "By joint title", sub: "The surviving owner holds it alone. No court.", icon: "key" },
-  trust: { title: "Already in the trust", sub: "Nothing moves; the trust’s terms take over. No court.", icon: "trust" },
-  probate: { title: "By will, through probate court", sub: "On the public record. Often months, with costs.", icon: "court" },
-  unknown: { title: "Not in the documents", sub: "The documents don’t say how this passes.", icon: "form" },
+  contract: { title: "Goes to whoever the form names", sub: "As long as that person is still living. No court.", icon: "form" },
+  agreement: { title: "Goes to whoever the LLC agreement names", sub: "The agreement says who steps in. No court.", icon: "llc" },
+  title: { title: "Goes to the other name on it", sub: "Whoever is left on the account keeps it. No court.", icon: "key" },
+  trust: { title: "Already in the trust", sub: "Nothing has to move. The trust’s own rules take over. No court.", icon: "trust" },
+  probate: { title: "Goes to court first", sub: "Public record. Often months. Court and legal fees come out first.", icon: "court" },
+  unknown: { title: "The documents don’t say", sub: "Nothing on file shows where this goes.", icon: "form" },
 };
 export const ORDER = ["contract", "agreement", "title", "trust", "probate", "unknown"];
 
@@ -65,15 +65,15 @@ export function renderTransfer(model, view, { noteBadges }) {
     const court = recip.flows.filter((row) => ROUTES[row.route].court);
     const preTax = recip.flows.filter((row) => row.item?.taxTreatment === "pre-tax");
     const lines = [];
-    if (!known) lines.push({ text: "Total not computed: a value is not in the documents", tone: "ask" });
+    if (!known) lines.push({ text: "No total: one value isn’t in the documents", tone: "ask" });
     else {
-      if (arrives.length) lines.push({ text: `${money(sum(arrives))} arrives, no court`, tone: "", key: "arrives", amount: sum(arrives), suffix: " arrives, no court" });
-      if (preTax.length) lines.push({ text: `${money(sum(preTax))} of it is pre-tax`, tone: "sub", key: "pretax", amount: sum(preTax), suffix: " of it is pre-tax" });
-      if (stays.length) lines.push({ text: `${money(sum(stays))} already held, stays put`, tone: "", key: "stays", amount: sum(stays), suffix: " already held, stays put" });
-      if (court.length) lines.push({ text: `${money(sum(court))} after probate, less costs`, tone: "flag", key: "court", amount: sum(court), suffix: " after probate, less costs" });
+      if (arrives.length) lines.push({ text: `${money(sum(arrives))} with no court`, tone: "", key: "arrives", amount: sum(arrives), suffix: " with no court" });
+      if (preTax.length) lines.push({ text: `Income tax is still owed on ${money(sum(preTax))} of it`, tone: "sub", key: "pretax", amount: sum(preTax), prefix: "Income tax is still owed on ", suffix: " of it" });
+      if (stays.length) lines.push({ text: `${money(sum(stays))} already here, nothing moves`, tone: "", key: "stays", amount: sum(stays), suffix: " already here, nothing moves" });
+      if (court.length) lines.push({ text: `${money(sum(court))} after court, minus fees`, tone: "flag", key: "court", amount: sum(court), suffix: " after court, minus fees" });
     }
     const survivors = (event.survivors ?? []).map((id) => shortName(model.nodes[id]));
-    const subtitle = recip.node.kind === "law" ? "Usually the spouse and children, in shares the state sets" : recip.node.kind === "person" ? `Claims or keeps it in ${shortName(recip.node)}’s own name` : recip.node.trust?.onDeath?.trusteeAfter === "survivor" ? `${survivors.join(" and ")} becomes sole trustee` : "";
+    const subtitle = recip.node.kind === "law" ? "Usually the spouse and children, split the way the state’s rulebook says" : recip.node.kind === "person" ? `It becomes ${shortName(recip.node)}’s` : recip.node.trust?.onDeath?.trusteeAfter === "survivor" ? `${survivors.join(" and ")} now runs it alone` : "";
     const subtitleLines = subtitle ? wrap(subtitle, "detail", recipW - 32, 2) : [];
     const h = 58 + subtitleLines.length * 18 + lines.reduce((sum, l) => sum + (l.tone === "sub" ? 17 : 22), 0) + 16;
     const mid = ys.length ? (Math.min(...ys) + Math.max(...ys)) / 2 : cursor + h / 2;
@@ -87,9 +87,9 @@ export function renderTransfer(model, view, { noteBadges }) {
   const out = [];
   const boxes = [], segments = [];
   out.push(`<svg class="bt-figure bt-transfer" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${esc(view.title)}" xmlns="http://www.w3.org/2000/svg">`);
-  out.push(`<text class="bt-colhead" x="${M}" y="24">WHAT ${esc(shortName(who).toUpperCase())} OWNS OR CONTROLS</text>`);
-  out.push(`<text class="bt-colhead" x="${stationX}" y="24">HOW IT PASSES</text>`);
-  out.push(`<text class="bt-colhead" x="${recipX}" y="24">WHO HOLDS IT AFTER</text>`);
+  out.push(`<text class="bt-colhead" x="${M}" y="24">WHAT IS IN ${esc(shortName(who).toUpperCase())}’S NAME</text>`);
+  out.push(`<text class="bt-colhead" x="${stationX}" y="24">HOW IT GETS TO SOMEONE</text>`);
+  out.push(`<text class="bt-colhead" x="${recipX}" y="24">WHO ENDS UP WITH IT</text>`);
 
   // Bands.
   for (const band of bands) {
@@ -137,7 +137,7 @@ export function renderTransfer(model, view, { noteBadges }) {
     const badges = noteBadges.get(row.id) ?? [];
     const court = ROUTES[row.route].court;
     // Say what governs each item, so the red "name alone" belongs only to the court route.
-    const holdText = row.ownedBy ? `Owned by ${row.ownedBy.map((id) => shortName(model.nodes[id])).join(" and ")}` : row.via ? `In ${inSentence(shortName(model.nodes[row.via]))}` : row.holding.joint ? `Joint with ${row.holding.holders.filter((h) => h !== event.who).map((h) => shortName(model.nodes[h])).join(", ")}` : row.route === "contract" ? `${shortName(who)}’s, with a beneficiary form` : row.route === "agreement" ? `${shortName(who)}’s, with a successor named` : node.designation && node.designation.source?.status !== "unknown" && !(node.designation.primary ?? []).length ? `${shortName(who)}’s; the form names no one` : `In ${shortName(who)}’s name alone, no form`;
+    const holdText = row.ownedBy ? `Owned by ${row.ownedBy.map((id) => shortName(model.nodes[id])).join(" and ")}` : row.via ? `In ${inSentence(shortName(model.nodes[row.via]))}` : row.holding.joint ? `Joint with ${row.holding.holders.filter((h) => h !== event.who).map((h) => shortName(model.nodes[h])).join(", ")}` : row.route === "contract" ? `${shortName(who)}’s, and a form says who gets it` : row.route === "agreement" ? `${shortName(who)}’s, and the agreement says who steps in` : node.designation && node.designation.source?.status !== "unknown" && !(node.designation.primary ?? []).length ? `${shortName(who)}’s, and no one is named to get it` : `${shortName(who)}’s alone, and no one is named to get it`;
     out.push(`<g class="bt-node" data-id="${esc(row.id)}" tabindex="0" role="group" aria-label="${esc(node.name)}">`);
     out.push(`<rect class="bt-card bt-asset${court ? " bt-t-flag" : ""}" x="${M}" y="${y}" width="${assetW}" height="${rowH}" rx="10"/>`);
     out.push(icon(iconFor(node), M + 14, y + 12, 15, "bt-icon"));
@@ -159,7 +159,7 @@ export function renderTransfer(model, view, { noteBadges }) {
     out.push(`<g class="bt-station${court ? " bt-station-court" : ""}" data-station="${esc(row.id)}"><rect x="${stationX}" y="${sy}" width="${stationW}" height="${sh}" rx="${court ? 9 : sh / 2}"/>`);
     if (court) {
       out.push(icon("clock", stationX + 12, sy + 11, 15, "bt-icon bt-icon-flag"));
-      out.push(`<text class="bt-station-title" x="${stationX + 34}" y="${sy + 23}">Probate court first</text>`);
+      out.push(`<text class="bt-station-title" x="${stationX + 34}" y="${sy + 23}">Court first</text>`);
       lines.forEach((line, k) => out.push(`<text class="bt-station-text" x="${stationX + 34}" y="${sy + 39 + k * 14.5}">${esc(line)}</text>`));
     } else {
       lines.forEach((line, k) => out.push(`<text class="bt-station-text" x="${stationX + stationW / 2}" y="${sy + sh / 2 + 4.5 - (lines.length - 1) * 8 + k * 16}" text-anchor="middle">${esc(line)}</text>`));
@@ -182,7 +182,7 @@ export function renderTransfer(model, view, { noteBadges }) {
     let ty = ry + 50;
     for (const line of recip.subtitleLines) { ty += 18; out.push(`<text class="bt-detail" x="${x + 16}" y="${ty}">${esc(line)}</text>`); }
     for (const line of recip.lines) {
-      const tag = line.key ? ` data-line="${line.key}" data-amount="${line.amount}" data-suffix="${esc(line.suffix)}"` : "";
+      const tag = line.key ? ` data-line="${line.key}" data-amount="${line.amount}" data-prefix="${esc(line.prefix ?? "")}" data-suffix="${esc(line.suffix)}"` : "";
       if (line.tone === "sub") { ty += 17; out.push(`<text class="bt-detail"${tag} x="${x + 16}" y="${ty}">${esc(line.text)}</text>`); continue; }
       ty += 22; out.push(`<text class="bt-value${line.tone ? ` bt-tone-${line.tone}` : ""}"${tag} x="${x + 16}" y="${ty}">${esc(line.text)}</text>`);
     }

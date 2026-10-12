@@ -54,7 +54,7 @@ export function deathRoutes(model, eventId) {
       route = "title";
       const living = others.filter((id) => alive(id, event));
       to = living.map((id) => ({ to: id, share: 1 / living.length }));
-      detail = living.length > 1 ? "Survivors own it together" : "Survivor owns it alone";
+      detail = living.length > 1 ? `${listJoin(living.map((id) => shortName(model.nodes[id])))} keep it` : `${shortName(model.nodes[living[0]])} keeps it`;
     } else if (!pays) {
       // A policy on someone else's life pays nothing now; the policy itself
       // passes to a named successor owner, else through the estate.
@@ -70,7 +70,7 @@ export function deathRoutes(model, eventId) {
         if (picked) {
           route = "contract";
           to = picked.to;
-          detail = `Form names ${listJoin(picked.to.map((entry) => inSentence(shortName(model.nodes[entry.to]))))}`;
+          detail = `The form names ${listJoin(picked.to.map((entry) => inSentence(shortName(model.nodes[entry.to]))))}`;
         }
       }
     } else if (item.llc?.onMemberDeath === "successor" && item.llc.successor) {
@@ -84,9 +84,9 @@ export function deathRoutes(model, eventId) {
       const will = who.will;
       if (will) facts.push(will.source);
       route = "probate";
-      if (will?.residueTo) { to = [{ to: will.residueTo, share: 1 }]; detail = `Then the will gives it to ${inSentence(shortName(model.nodes[will.residueTo]))}`; }
-      else if (will?.source?.status === "unknown") { to = [{ to: "intestacy", share: 1 }]; detail = "No will in the documents; state law decides who"; }
-      else if (will?.none) { to = [{ to: "intestacy", share: 1 }]; detail = "No will, so state intestacy law decides who"; }
+      if (will?.residueTo) { to = [{ to: will.residueTo, share: 1 }]; detail = `Then the will sends it to ${inSentence(shortName(model.nodes[will.residueTo]))}`; }
+      else if (will?.source?.status === "unknown") { to = [{ to: "intestacy", share: 1 }]; detail = "No will on file, so the state’s default list decides"; }
+      else if (will?.none) { to = [{ to: "intestacy", share: 1 }]; detail = "No will, so the state’s default list decides"; }
       else { to = []; detail = "Passes under the will"; }
     }
     rows.push({ id: item.id, item, holding, value: pays ? value : item.cashValue?.usd ?? null, route, to, detail, facts });
@@ -100,7 +100,7 @@ export function deathRoutes(model, eventId) {
     rows.push({
       id: node.id, item: node, holding: holdingsOf(model, node.id)[0], value: node.value?.usd ?? null,
       route: picked ? "contract" : "unknown", to: picked?.to ?? [],
-      detail: picked ? `Form names ${listJoin(picked.to.map((e) => inSentence(shortName(model.nodes[e.to]))))}` : "No beneficiary in the documents",
+      detail: picked ? `The form names ${listJoin(picked.to.map((e) => inSentence(shortName(model.nodes[e.to]))))}` : "No one named in the documents",
       facts: [node.designation?.source].filter(Boolean), ownedBy: owners,
     });
   }
@@ -114,7 +114,7 @@ export function deathRoutes(model, eventId) {
       const survivorTrustee = terms?.trusteeAfter === "survivor" ? (event.survivors ?? []).map((id) => shortName(model.nodes[id])).join(" and ") : null;
       rows.push({
         id: item.id, item, holding, value: valueOf(model, item.id), route: "trust", to: [{ to: node.id, share: 1 }],
-        detail: terms?.first === "continues" ? `Continues under trust ${terms.source?.at ?? "terms"}${survivorTrustee ? `; ${survivorTrustee} sole trustee` : ""}` : `Per the trust’s terms${terms?.source?.at ? ` (${terms.source.at})` : ""}`,
+        detail: terms?.first === "continues" ? `Stays in the trust${survivorTrustee ? `, which ${survivorTrustee} now runs` : ""} (${terms.source?.at ?? "trust terms"})` : `Follows the trust’s rules${terms?.source?.at ? ` (${terms.source.at})` : ""}`,
         facts: [holding.source, terms?.source].filter(Boolean),
         via: node.id,
       });

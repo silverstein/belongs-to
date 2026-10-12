@@ -95,3 +95,17 @@ export function missingFromIntake(model) {
   const unreadable = Object.entries(model.documents).filter(([, d]) => d.read === "unreadable" || d.read === "not-provided").map(([id, d]) => `${d.title}${d.read === "unreadable" ? " (could not be read)" : " (not provided)"}`);
   return [...items.map((i) => `${i.what}${i.result === "unreadable" ? " (could not be read)" : ""}${i.note ? `: ${i.note}` : ""}`), ...unreadable];
 }
+
+// The intake splits two ways on the page. Things the family doesn't have
+// (a will, powers of attorney) are news and go in the to-do list, written
+// as `todo`. Things the reviewer wanted and couldn't find (a plan's default
+// rules, a custodial agreement) are the reviewer's business and stay in
+// the footer. An entry with `todo` is the first kind.
+export function todosFromIntake(model) {
+  return (model.raw.intake?.lookedFor ?? []).filter((i) => i.result !== "found" && i.todo).map((i) => i.todo);
+}
+export function footerMissing(model) {
+  const items = (model.raw.intake?.lookedFor ?? []).filter((i) => i.result !== "found" && !i.todo);
+  const unreadable = Object.entries(model.documents).filter(([, d]) => d.read === "unreadable" || d.read === "not-provided").map(([id, d]) => `${d.title}${d.read === "unreadable" ? " (could not be read)" : " (not provided)"}`);
+  return [...items.map((i) => `${i.what}${i.result === "unreadable" ? " (could not be read)" : ""}${i.note ? `: ${i.note}` : ""}`), ...unreadable];
+}

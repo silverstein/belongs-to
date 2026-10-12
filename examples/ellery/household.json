@@ -427,7 +427,7 @@
       "type": "structure",
       "fig": 2,
       "title": "The LLC that owns one rental is still in Sam’s name, outside the trust.",
-      "subtitle": "If Sam dies, that rental goes through probate court before it reaches the trust. Everything in the Ellerys’ documents is drawn here by whose name it is in.",
+      "subtitle": "If Sam dies, that rental goes through probate court before it reaches the trust. Everything else in the Ellerys’ documents is drawn here by whose name it is in.",
       "place": {
         "sam": [
           1.5,
@@ -495,14 +495,14 @@
         {
           "on": "birchllc",
           "tone": "flag",
-          "title": "No assignment of Birch Avenue LLC to the trust is in the documents.",
-          "body": "It was formed in 2022, three years after the trust. Its agreement lists Sam as the only member (Sched. A) and its § 9.2, on a member’s death, names no successor. Unless a general assignment in the trust reaches it, it goes through probate when Sam dies. Before assigning it, the estate attorney checks the operating agreement and the loan, since a transfer can need the lender’s consent."
+          "title": "Nothing on file moves Birch Avenue LLC into the trust.",
+          "body": "It was formed in 2022, three years after the trust, and no paperwork moving it in is on file. Its agreement lists Sam as the only member (Sched. A) and names no one to step in if Sam dies (§ 9.2). Unless the trust’s own wording already reaches it, it goes through probate when Sam dies. The fix is a one-page assignment from the estate attorney, who will check the operating agreement and the loan first, since a transfer can need the lender’s okay."
         },
         {
           "on": "ira",
           "tone": "ask",
-          "title": "The documents don’t show a beneficiary for Dana’s IRA.",
-          "body": "Ask the custodian for the current designation, so the plan on paper matches what would actually happen."
+          "title": "Nothing on file says who gets Dana’s IRA.",
+          "body": "The IRA statement has no beneficiary page. Ask the custodian for the current form, so what is on paper matches what would actually happen."
         }
       ],
       "gaps": [
@@ -513,7 +513,7 @@
         }
       ],
       "kicker": "If you have a living trust and formed anything after it",
-      "law": "Ownership as shown by deeds, operating agreements and account records. Ohio is a common-law property state, so title decides ownership between spouses."
+      "law": "Who owns what, as the deeds, operating agreements and account records show it. In Ohio, what is in one spouse’s name is that spouse’s."
     },
     {
       "id": "first-death",
@@ -521,7 +521,7 @@
       "fig": 1,
       "event": "sam-dies",
       "title": "When Sam dies, one rental would likely go through probate court.",
-      "subtitle": "How each thing in these documents that Sam owns or controls would pass if Sam dies first and Dana survives. Only the LLC needs a court, unless a general assignment in the trust reaches it.",
+      "subtitle": "How each thing in Sam’s name would get to someone if Sam died first and Dana survived. Only the LLC needs a court, unless the trust’s own wording already reaches it.",
       "recipients": [
         "dana",
         "trust"
@@ -538,20 +538,20 @@
         {
           "on": "birchllc",
           "tone": "flag",
-          "title": "Probate is the one route here that runs through a court.",
-          "body": "Sam’s will leaves Birch Avenue LLC to the trust, but only after probate: a public court process with costs paid from the estate first. In Ohio the creditor claim period alone is six months. Until an executor is appointed, no one may have clear authority to run the rental. Fig. 2 shows why it is outside the trust."
+          "title": "Only one thing on this page goes through a court.",
+          "body": "Sam’s will sends Birch Avenue LLC to the trust, but only after probate: a public court process, often months long, with court and legal fees paid first. In Ohio, creditors alone get six months to file claims. Until the court names someone to act, no one may have clear authority to run the rental. Fig. 2 shows why it is outside the trust."
         },
         {
           "on": "trust",
           "tone": "info",
-          "title": "“No court” is not “nothing to do.”",
-          "body": "Under trust Art. 6 the whole trust continues with Dana as sole trustee; many joint trusts instead split at a first death. A death still brings notices, date-of-death values and possibly an estate tax return to keep Sam’s unused exemption. Which part counts as Sam’s, for the basis step-up and estate tax, depends on the trust’s terms and who contributed what."
+          "title": "“No court” doesn’t mean nothing to do.",
+          "body": "Under the trust’s Art. 6, the whole trust carries on with Dana running it alone; many joint trusts instead split in two at the first death. A death still brings notices, a valuation of everything as of that date, and possibly an estate tax return that preserves Sam’s unused exemption. Which part counts as Sam’s depends on the trust’s terms and on who put what in, and that isn’t in the documents."
         },
         {
           "on": "dana",
           "tone": "ask",
-          "title": "Any form that names Sam needs a new beneficiary.",
-          "body": "After Sam’s death, Dana updates every beneficiary form that names Sam. Her IRA’s designation isn’t in the documents, so it is the first one to check."
+          "title": "Any of Dana’s own forms that name Sam would need a new name.",
+          "body": "After Sam’s death, Dana would update every account that names Sam. Her IRA has no beneficiary form in the documents at all, so that is the first one to check."
         }
       ],
       "bands": [
@@ -562,9 +562,9 @@
       ],
       "kicker": "If you have a trust, a will and beneficiary forms",
       "fixes": {
-        "birchllc": "assign the LLC to the trust, after the attorney checks the operating agreement and the loan."
+        "birchllc": "a one-page assignment moving the LLC into the trust, after the attorney checks the operating agreement and the loan."
       },
-      "law": "How property passes at a death by title, beneficiary designation, trust terms and will; Ohio estate administration (Ohio Revised Code ch. 2113 to 2117)."
+      "law": "How things pass at a death: joint accounts to the other owner, accounts with a named person to that person, trust property under the trust’s own terms, and the rest through probate court (Ohio Revised Code, chapters 2113 to 2117)."
     }
   ],
   "jurisdiction": {
@@ -584,33 +584,37 @@
         "doc": "will-sam"
       },
       {
-        "what": "Dana's will",
+        "what": "Dana’s will",
         "result": "missing",
-        "note": "only Sam's will was provided"
+        "note": "only Sam’s was sent",
+        "todo": "Send Dana’s will, or if there isn’t one, the same attorney visit that moves the LLC can write it."
       },
       {
-        "what": "Durable financial powers of attorney for Sam and Dana",
+        "what": "Something that lets one of you act for the other if you can’t",
         "result": "missing",
-        "note": "someone must be able to sign for Sam if Sam can't"
+        "note": "no powers of attorney were sent",
+        "todo": "Check whether you have powers of attorney for each other. Without one, no one can sign the LLC assignment for Sam if Sam can’t."
       },
       {
         "what": "Health care directives",
-        "result": "missing"
+        "result": "missing",
+        "note": "none were sent"
       },
       {
-        "what": "A record of who contributed what to the joint trust",
+        "what": "A record of who put what into the joint trust",
         "result": "missing",
-        "note": "decides which part counts as Sam's"
+        "note": "it decides which part counts as Sam’s"
       },
       {
-        "what": "Beneficiary form for Dana's IRA",
+        "what": "The beneficiary form for Dana’s IRA",
         "result": "missing",
-        "note": "the statement shows no designation page"
+        "note": "the statement has no designation page",
+        "todo": "Ask the IRA custodian what beneficiary is on file for Dana, and name one if there isn’t."
       },
       {
-        "what": "An assignment of Birch Avenue LLC to the trust",
+        "what": "Paperwork moving Birch Avenue LLC into the trust",
         "result": "missing",
-        "note": "the Elm Street assignment was provided; nothing for Birch"
+        "note": "the Elm Street one was sent; nothing for Birch"
       }
     ]
   }
