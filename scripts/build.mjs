@@ -43,7 +43,7 @@ for (const view of model.views) {
   const checkNamed = (name) => facts.checks.find((c) => c.name === name)?.passed;
   if (checkNamed("every fact cited or marked")) receipt.push({ text: "Every number here points to one of your documents. Where we couldn’t find something, we said so." });
   const openHere = facts.open.filter((o) => o.status !== "illustrative");
-  const openLetters = [...new Set(openHere.map((o) => notes.find((n) => n.on === o.where.split(".")[0])?.letter).filter(Boolean))];
+  const openLetters = [...new Set(openHere.map((o) => notes.find((n) => n.on === o.where.split(".")[0])?.letter).filter(Boolean))].sort();
   if (openHere.length) receipt.push({ text: `${openHere.length === 1 ? "One thing" : `${openHere.length} things`} the documents don’t answer. We said so instead of guessing${openLetters.length ? ` (${openLetters.length === 1 ? "note" : "notes"} ${openLetters.join(", ")})` : ""}`, open: true });
   const illustrative = facts.open.filter((o) => o.status === "illustrative");
   const notIn = footerMissing(model).length;
