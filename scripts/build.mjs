@@ -13,6 +13,7 @@ import { renderTransferStacked } from "../kit/transfer-stacked.mjs";
 import { renderStructureStacked } from "../kit/structure-stacked.mjs";
 import { renderQsbsLedger } from "../kit/ledger.mjs";
 import { auditLayout } from "../kit/audit.mjs";
+import { deathRoutes } from "../kit/derive.mjs";
 import { pageHtml } from "../kit/page.mjs";
 import { documentsLookedAt, readReceipt } from "../kit/receipt.mjs";
 
@@ -50,6 +51,13 @@ for (const view of model.views) {
   if (notIn) receipt.push({ text: `${notIn} ${notIn === 1 ? "thing" : "things"} we looked for and couldn’t find, listed here`, open: true });
   if (illustrative.length) receipt.push({ text: `The sale price is an example, not a real offer`, open: true });
 
+  if (view.type === "transfer") {
+    // Items drawn as the trust's by its schedule rest on the trust papers being
+    // signed. When the copy in hand isn't, the page says so under the title.
+    const listed = deathRoutes(model, view.event).filter((r) => r.route === "declared");
+    const trustDoc = listed.length ? model.documents[model.nodes[listed[0].to[0].to].source?.doc] : null;
+    if (trustDoc && trustDoc.signed !== "signed" && !view.kicker) view.kicker = `The copy we have of the trust papers is ${trustDoc.signed === "unsigned" ? "unsigned" : "not shown as signed"}. If the signed set exists, the trust’s list most likely already covers what’s drawn under “On the trust’s list”; if it doesn’t, nothing is in the trust yet.`;
+  }
   if (view.type === "structure") {
     rendered = renderStructure(model, view, { noteBadges });
     stacked = renderStructureStacked(model, view, { noteBadges });

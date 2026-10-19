@@ -426,5 +426,68 @@ test("a document that was read is listed even when no card cites it", () => {
   if (documentsLookedAt(normalize(raw)).includes("sidecar")) throw new Error("unreadable document listed as looked at");
 });
 
+
+// The rule gap from the first real-document trial: a trust whose schedule
+// lists an asset still in the grantor's name. Routed to probate before.
+const scheduled = () => {
+  const raw = load("ellery");
+  raw.holdings = raw.holdings.filter((h) => h.held !== "home");
+  raw.holdings.push({ holder: "sam", held: "home", share: 1, source: { doc: "deed-home", at: "p. 1" } });
+  raw.assets.home.trustSchedule = { trust: "trust", source: { doc: "trust", at: "Schedule A, p. 30" } };
+  raw.documents.trust.signed = "signed";
+  raw.views[1].bands = ["title", "contract", "agreement", "trust", "declared", "probate"];
+  raw.views[1].notes.push({ on: "home", tone: "info", title: "The house is on the trust’s list but still in Sam’s name.", body: "The trust’s schedule names it (Trust, p. 30). Usually that counts, after one court step to fix the deed." });
+  return raw;
+};
+test("an asset on the trust's schedule but in the grantor's name routes to the trust, not probate", () => {
+  const raw = scheduled();
+  const m = normalize(raw);
+  const row = deathRoutes(m, "sam-dies").find((r) => r.id === "home");
+  if (row.route !== "declared" || row.to[0].to !== "trust") throw new Error(`route ${row.route} to ${JSON.stringify(row.to)}`);
+  const r = verify(m);
+  if (!r.ok) throw new Error(r.errors.join("; "));
+  for (const render of [renderTransfer, renderTransferStacked]) {
+    const text = rowText(render(m, raw.views[1], { noteBadges: new Map() }).svg, "home");
+    if (!/trust’s list names it/.test(text)) throw new Error(`${render.name}: ${text.slice(0, 120)}`);
+  }
+});
+
+test("a scheduled asset needs the trust document's signed state", () => {
+  const raw = scheduled();
+  delete raw.documents.trust.signed;
+  expectFail(raw, "events derive", /needs signed: "signed", "unsigned" or "unknown"/);
+});
+
+test("an unsigned trust copy is a finding a note must carry", () => {
+  const raw = scheduled();
+  raw.documents.trust.signed = "unsigned";
+  for (const view of raw.views) view.notes = (view.notes ?? []).filter((n) => n.on !== "trust");
+  const r = verify(normalize(raw));
+  const c = r.checks.find((x) => x.name === "findings surfaced");
+  if (c.passed || !c.problems.some((p) => /unsigned/.test(p))) throw new Error(c.problems.join("; ") || "passed without a note on the trust");
+  raw.views[1].notes.push({ on: "trust", tone: "ask", title: "The trust papers we have are unsigned.", body: "Find the signed set; the list only counts if they were signed." });
+  const ok = verify(normalize(raw));
+  if (!ok.ok) throw new Error(ok.errors.join("; "));
+});
+
+test("an LLC whose operating agreement is not in the documents is a gap, not probate", () => {
+  const raw = load("ellery");
+  raw.parties.birchllc.llc = { source: { status: "unknown", note: "no operating agreement in the documents" } };
+  raw.views[1].bands.push("unknown");
+  const row = deathRoutes(normalize(raw), "sam-dies").find((r) => r.id === "birchllc");
+  if (row.route !== "unknown" || !/operating agreement/.test(row.detail)) throw new Error(`${row.route}: ${row.detail}`);
+});
+
+test("a note that cites a document by a short name the footer doesn't list fails", () => {
+  const raw = load("ellery");
+  raw.views[0].notes[0].body += " The lender agreed (Loan letter, p. 2).";
+  expectFail(raw, "prose citations name a listed document", /Loan letter/);
+  const fine = load("ellery");
+  fine.views[0].notes[0].body += " The deed shows it (Home deed, p. 1).";
+  const r = verify(normalize(fine));
+  const c = r.checks.find((x) => x.name === "prose citations name a listed document");
+  if (!c.passed) throw new Error(c.problems.join("; "));
+});
+
 console.log(failures ? `\n${failures} failed` : "\nall passed");
 process.exit(failures ? 1 : 0);

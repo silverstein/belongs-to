@@ -63,14 +63,16 @@ export function renderTransferStacked(model, view, { noteBadges }) {
   const recipLayout = recipients.map((recip, i) => {
     const known = recip.flows.every((f) => f.row.value != null);
     const sum = (list) => list.reduce((s, f) => s + (f.row.value ?? 0) * f.share, 0);
-    const arrives = recip.flows.filter((f) => !ROUTES[f.row.route].court && f.row.route !== "trust");
+    const arrives = recip.flows.filter((f) => !ROUTES[f.row.route].court && f.row.route !== "trust" && f.row.route !== "declared");
     const stays = recip.flows.filter((f) => f.row.route === "trust");
+    const listed = recip.flows.filter((f) => f.row.route === "declared");
     const court = recip.flows.filter((f) => ROUTES[f.row.route].court);
     const lines = [];
     if (!known) lines.push({ text: "No total: one value is missing", tone: "ask" });
     else {
       if (arrives.length) lines.push({ text: `${money(sum(arrives))} with no court`, key: "arrives", amount: sum(arrives), suffix: " with no court" });
       if (stays.length) lines.push({ text: `${money(sum(stays))} already here, nothing moves`, key: "stays", amount: sum(stays), suffix: " already here, nothing moves" });
+      if (listed.length) lines.push({ text: `${money(sum(listed))} likely here, after one court step`, key: "listed", amount: sum(listed), suffix: " likely here, after one court step" });
       if (court.length) lines.push({ text: `${money(sum(court))} after court, minus fees`, tone: "flag", key: "court", amount: sum(court), suffix: " after court, minus fees" });
     }
     const survivors = (event.survivors ?? []).map((id) => shortName(model.nodes[id]));

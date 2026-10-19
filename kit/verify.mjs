@@ -24,6 +24,7 @@ export function verify(model) {
     for (const id of node.trust?.grantors ?? []) need(id, `${node.id} grantors`);
     for (const id of node.trust?.trustees ?? []) need(id, `${node.id} trustees`);
     if (node.will?.residueTo) need(node.will.residueTo, `${node.id} will`);
+    if (node.trustSchedule) { need(node.trustSchedule.trust, `${node.id} trustSchedule`); if (nodes[node.trustSchedule.trust] && nodes[node.trustSchedule.trust].kind !== "trust") refProblems.push(`${node.id} trustSchedule names "${node.trustSchedule.trust}", which is not a trust`); }
     if (node.tax?.treatedAs && node.tax.treatedAs !== "self") need(node.tax.treatedAs, `${node.id} tax owner`);
   }
   const sources = [];
@@ -31,7 +32,7 @@ export function verify(model) {
   for (const h of holdings) { collect(h, `holding ${h.holders.join("+")} → ${h.held}`); collect(h.acquired, `acquisition ${h.holders.join("+")} → ${h.held}`); }
   for (const node of Object.values(nodes)) {
     collect(node, node.id);
-    for (const key of ["value", "designation", "tax", "will", "corp", "llc"]) collect(node[key], `${node.id}.${key}`);
+    for (const key of ["value", "designation", "tax", "will", "corp", "llc", "trustSchedule"]) collect(node[key], `${node.id}.${key}`);
     collect(node.trust?.onDeath, `${node.id}.trust.onDeath`);
     for (const [key, fact] of Object.entries(node.qsbs ?? {})) collect(fact, `${node.id}.qsbs.${key}`);
   }
@@ -75,6 +76,7 @@ export function verify(model) {
     if (node.designation && !isCited(node.designation.source)) citeProblems.push(`${node.id} beneficiary designation has no source`);
     if (node.tax && !isCited(node.tax.source)) citeProblems.push(`${node.id} tax treatment has no source`);
     if (node.will && !isCited(node.will.source)) citeProblems.push(`${node.id} will has no source`);
+    if (node.trustSchedule && !isCited(node.trustSchedule.source)) citeProblems.push(`${node.id} trustSchedule has no source (cite the schedule's page)`);
     if (node.virtual) continue;
     if (node.trust?.onDeath && !isCited(node.trust.onDeath.source)) citeProblems.push(`${node.id} trust terms on death have no source`);
     if (!node.isAsset && node.kind !== "person" && !isCited(node.source)) citeProblems.push(`${node.id} has no formation document`);
@@ -138,6 +140,15 @@ export function verify(model) {
         for (const row of deathRoutes(model, eventId)) {
           if (row.route === "probate") findings.push({ node: row.id, severity: "high", text: `${shortName(row.item)} passes through probate court if ${shortName(nodes[event.who])} dies` });
           if (row.route === "unknown") findings.push({ node: row.id, severity: "high", text: `${shortName(row.item)}: route not in documents` });
+          if (row.route === "declared") {
+            // Whether the schedule counts rests on the trust papers being signed; the model must say which.
+            const trust = nodes[row.to[0].to];
+            const doc = documents[trust.source?.doc];
+            const signed = doc?.signed;
+            if (!["signed", "unsigned", "unknown"].includes(signed)) eventProblems.push(`${row.id} is drawn as the trust's by its schedule, so the trust document "${trust.source?.doc}" needs signed: "signed", "unsigned" or "unknown"`);
+            findings.push({ node: row.id, severity: "high", text: `${shortName(row.item)}: on the trust's list but still in ${shortName(nodes[event.who])}'s name` });
+            if (signed && signed !== "signed") findings.push({ node: trust.id, severity: "high", text: `${shortName(trust)}: the copy of the trust papers is ${signed === "unsigned" ? "unsigned" : "not known to be signed"}, and the schedule only counts if they were` });
+          }
           if (row.route === "probate" && row.to.some((e) => e.to === "intestacy")) findings.push({ node: row.id, severity: "high", text: `${shortName(row.item)}: no will, so state intestacy law decides who gets it` });
           if (row.route === "probate" && !row.to.length) eventProblems.push(`${row.id}: the will's residuary beneficiary is not given (will.residueTo), or mark the will unknown`);
         }
@@ -182,6 +193,27 @@ export function verify(model) {
     if (/\b(never|everything they own|all they own)\b/i.test(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`)) absenceProblems.push(`${view.id}: "${(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`.match(/\b(never|everything they own|all they own)\b/i) ?? [])[0]}" claims more than the documents can show`);
   }
   check("absence said as absence", [...new Set(absenceProblems)]);
+
+  // 5c2. A citation written into prose ("(Trust schedule, p. 3)") must name a
+  // document the footer lists by that short name, or the reader cannot find it.
+  const proseCiteProblems = [];
+  const shorts = new Map(Object.entries(documents).filter(([, d]) => d.read === "read" || d.read === "partial").map(([id, d]) => [String(d.short ?? "").trim().toLowerCase(), id]));
+  const scan = (text, where) => {
+    for (const m of String(text ?? "").matchAll(/\(([^()]*?)\)/g)) {
+      for (const part of m[1].split(";")) {
+        if (!/(^|[\s,])pp?\.\s*\d/.test(part)) continue;
+        const name = part.split(",")[0].trim();
+        if (!name || /^(pp?\.|Art\.|§|notes?\b)/.test(name)) continue;
+        if (!shorts.has(name.toLowerCase())) proseCiteProblems.push(`${where} cites "${name}, …" but no readable document is listed with the short name "${name}"`);
+      }
+    }
+  };
+  for (const view of model.views) {
+    for (const [i, note] of (view.notes ?? []).entries()) scan(`${note.title} ${note.body}`, `${view.id} note ${String.fromCharCode(65 + i)}`);
+    for (const [id, fix] of Object.entries(view.fixes ?? {})) scan(fix, `${view.id} fix for ${id}`);
+    scan(`${view.title} ${view.subtitle ?? ""} ${view.kicker ?? ""}`, `${view.id} title`);
+  }
+  check("prose citations name a listed document", [...new Set(proseCiteProblems)]);
 
   // 5d. Numbers in prose match numbers the model or the rules produce.
   const numbers = new Set([12]);

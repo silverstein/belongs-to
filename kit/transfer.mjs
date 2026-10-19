@@ -14,10 +14,11 @@ export const BAND_TEXT = {
   agreement: { title: "Goes to whoever the LLC agreement names", sub: "The agreement says who steps in. No court.", icon: "llc" },
   title: { title: "Goes to the other name on it", sub: "Whoever is left on the account keeps it. No court.", icon: "key" },
   trust: { title: "Already in the trust", sub: "Nothing has to move. The trust’s own rules take over. No court.", icon: "trust" },
+  declared: { title: "On the trust’s list, but not in its name", sub: "The trust’s own schedule names it; the title or company record doesn’t. Usually one court step fixes that, not full probate. An attorney confirms for your state.", icon: "trust" },
   probate: { title: "Goes to court first", sub: "Public record. Often months. Court and legal fees come out first.", icon: "court" },
   unknown: { title: "The documents don’t say", sub: "Nothing on file shows where this goes.", icon: "form" },
 };
-export const ORDER = ["contract", "agreement", "title", "trust", "probate", "unknown"];
+export const ORDER = ["contract", "agreement", "title", "trust", "declared", "probate", "unknown"];
 
 export function renderTransfer(model, view, { noteBadges }) {
   const event = model.events[view.event];
@@ -64,8 +65,9 @@ export function renderTransfer(model, view, { noteBadges }) {
     const sum = (list) => list.reduce((s, row) => s + (row.value ?? 0), 0);
     // Three different things: money that arrives without a court, property
     // the trust already held (nothing moves), and what waits for probate.
-    const arrives = recip.flows.filter((row) => !ROUTES[row.route].court && row.route !== "trust");
+    const arrives = recip.flows.filter((row) => !ROUTES[row.route].court && row.route !== "trust" && row.route !== "declared");
     const stays = recip.flows.filter((row) => row.route === "trust");
+    const listed = recip.flows.filter((row) => row.route === "declared");
     const court = recip.flows.filter((row) => ROUTES[row.route].court);
     const preTax = recip.flows.filter((row) => row.item?.taxTreatment === "pre-tax");
     const lines = [];
@@ -74,6 +76,7 @@ export function renderTransfer(model, view, { noteBadges }) {
       if (arrives.length) lines.push({ text: `${money(sum(arrives))} with no court`, tone: "", key: "arrives", amount: sum(arrives), suffix: " with no court" });
       if (preTax.length) lines.push({ text: `Income tax is still owed on ${money(sum(preTax))} of it`, tone: "sub", key: "pretax", amount: sum(preTax), prefix: "Income tax is still owed on ", suffix: " of it" });
       if (stays.length) lines.push({ text: `${money(sum(stays))} already here, nothing moves`, tone: "", key: "stays", amount: sum(stays), suffix: " already here, nothing moves" });
+      if (listed.length) lines.push({ text: `${money(sum(listed))} likely here, after one court step`, tone: "", key: "listed", amount: sum(listed), suffix: " likely here, after one court step" });
       if (court.length) lines.push({ text: `${money(sum(court))} after court, minus fees`, tone: "flag", key: "court", amount: sum(court), suffix: " after court, minus fees" });
     }
     const survivors = (event.survivors ?? []).map((id) => shortName(model.nodes[id]));

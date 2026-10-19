@@ -11,6 +11,7 @@ export const ROUTES = {
   agreement: { label: "The LLC agreement", court: false, order: 0.5 },
   title: { label: "Joint title", court: false, order: 1 },
   trust: { label: "The trust", court: false, order: 2 },
+  declared: { label: "On the trust’s list, not in its name", court: null, order: 2.5 },
   probate: { label: "Will, through probate court", court: true, order: 3 },
   unknown: { label: "Not in documents", court: null, order: 4 },
 };
@@ -50,6 +51,14 @@ export function deathRoutes(model, eventId) {
     let route, to, detail;
     const others = holding.holders.filter((id) => id !== event.who);
     const pays = !(item.kind === "insurance" && item.insures && item.insures !== event.who);
+    // The trust's own schedule names this item, but it is still in the
+    // decedent's name. In the states that follow California's Heggstad line
+    // a signed declaration with a schedule is enough to make it trust
+    // property; the title gets conformed by a short court petition, not by
+    // probate. The page draws that as its own band and says what it rests on.
+    const schedule = item.trustSchedule && model.nodes[item.trustSchedule.trust];
+    const declared = schedule?.kind === "trust" && schedule.trust?.revocable && schedule.trust.grantors?.includes(event.who) ? schedule : null;
+    const declare = () => { facts.push(item.trustSchedule.source); route = "declared"; to = [{ to: declared.id, share: 1 }]; detail = "On the trust’s list. Likely the trust’s after one court step."; };
     if (holding.joint && others.some((id) => alive(id, event))) {
       route = "title";
       const living = others.filter((id) => alive(id, event));
@@ -62,9 +71,12 @@ export function deathRoutes(model, eventId) {
     } else if (item.designation) {
       facts.push(item.designation.source);
       if (item.designation.source?.status === "unknown") {
-        route = "unknown";
-        to = [];
-        detail = item.kind === "property" ? "The deed isn’t in the documents" : item.kind === "vehicle" ? "The title isn’t in the documents" : "No beneficiary form in the documents";
+        if (declared) declare();
+        else {
+          route = "unknown";
+          to = [];
+          detail = item.kind === "property" ? "The deed isn’t in the documents" : item.kind === "vehicle" ? "The title isn’t in the documents" : "No beneficiary form in the documents";
+        }
       } else {
         const picked = pickBeneficiaries(item.designation, event);
         if (picked) {
@@ -78,6 +90,13 @@ export function deathRoutes(model, eventId) {
       route = "agreement";
       to = [{ to: item.llc.successor, share: 1 }];
       detail = "Agreement names a successor";
+    }
+    if (!route && declared) declare();
+    if (!route && item.llc && item.llc.source?.status === "unknown") {
+      // No operating agreement in the documents: it may name a successor, so
+      // the route is a gap, the same as a missing beneficiary form.
+      facts.push(item.llc.source);
+      route = "unknown"; to = []; detail = "The operating agreement isn’t in the documents";
     }
     if (!route) {
       if (item.llc) facts.push(item.llc.source);
@@ -266,6 +285,7 @@ export function holdLine(model, event, row) {
   const mine = part ? `${shortName(who)}’s ${part}` : `${shortName(who)}’s`;
   if (row.route === "contract") return `${mine}, and a form says who gets it`;
   if (row.route === "agreement") return `${mine}, and the agreement says who steps in`;
+  if (row.route === "declared") return `${mine} by title, and the trust’s list names it`;
   if (row.route === "unknown" || node.designation?.source?.status === "unknown") return `${mine}, and the documents don’t show who gets it`;
   if (node.llc && node.llc.source?.status === "unknown") return `${mine}, and the documents don’t show who steps in`;
   if (node.designation && !(node.designation.primary ?? []).length) return `${mine}, and no one is named to get it`;

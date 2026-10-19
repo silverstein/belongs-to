@@ -36,6 +36,8 @@ Cite a legal conclusion (grantor-trust status, disregarded-entity status, C-corp
 - `jurisdiction` is required whenever there is an event. Cite the document that establishes residence (a return, an intake note, a will's recital). `communityProperty` is the legal classification of that state, not a document fact; the kit applies it as law.
 - `short` is how a document is cited on cards, so keep it to one or two words. Shorts must be unique: three documents all called "Statement" can't be told apart.
 - Every document carries `read`: `read`, `partial` (with `readNote` saying which pages, for example "pp. 1 to 6 of 40"), `unreadable` (a scan the agent could not read) or `not-provided` (the household mentioned it but did not hand it over). A citation into an `unreadable` or `not-provided` document fails the build. Unread documents still belong in the list, because "we knew about it and could not read it" is a finding.
+- A trust or will document may carry `signed`: `signed` (signatures and, where needed, witnesses or a notary appear on the copy), `unsigned` (the copy shows blank signature lines) or `unknown` (the copy doesn't show the signature pages). It is required on the trust's document when any asset is drawn as the trust's through `trustSchedule`, because that route only holds if the papers were signed.
+- A citation written into a note's prose, such as "(Trust schedule, p. 3)", must use a listed document's `short` exactly, or the build fails: the reader finds the page through the footer list.
 
 ## Intake
 
@@ -96,6 +98,7 @@ The intake record is what the agent looked for, before it modeled anything. It i
 
 - Asset kinds with their own label and icon: `home`, `rental`, `brokerage`, `retirement`, `insurance`, `stock`, `vehicle`, `bank` (also `checking`, `savings`). Any other kind is printed as written with a generic icon, so prefer one of these.
 - Put every value on one basis, preferably equity after loans, and say so in `basis`. Line widths compare values, so gross and net values mixed together would mislead. A derived value cites every page it rests on (`"at": "p. 1 and p. 2"`) and may carry its parts, which notes can then quote: `"value": { "usd": 283000, "basis": "equity after the loan", "gross": 685000, "loan": 402150, "source": { … } }`. Any other dollar figure in a title or note must be a number the model produces, or the build fails.
+- `trustSchedule: { "trust": "<trust id>", "source": { "doc": "trust", "at": "Schedule A, p. 2" } }` on an asset says the trust's own schedule lists it while the holding is still in a person's name. At that person's death the kit routes their share to the trust in its own band ("On the trust's list, but not in its name"), ahead of the will and behind any beneficiary form or agreement the documents show; see `references/law.md`. An asset the trust actually holds is a holding by the trust, not a `trustSchedule`.
 - A payable-on-death or transfer-on-death registration on a bank or brokerage account is a `designation` like any beneficiary form. "None on file" on the statement is a known absence: `"designation": { "primary": [], "source": { "doc": "checking-stmt", "at": "p. 1" } }`.
 
 ## Holdings
