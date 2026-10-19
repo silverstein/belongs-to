@@ -11,6 +11,7 @@ import { renderStructure } from "../kit/structure.mjs";
 import { renderTransfer } from "../kit/transfer.mjs";
 import { renderTransferStacked } from "../kit/transfer-stacked.mjs";
 import { auditLayout } from "../kit/audit.mjs";
+import { documentsLookedAt, readReceipt } from "../kit/receipt.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const load = (name) => JSON.parse(readFileSync(join(root, "examples", name, "household.json"), "utf8"));
@@ -369,6 +370,60 @@ test("layout audit catches a line drawn through a card", () => {
     const audit = auditLayout(rendered.geometry);
     if (audit.ok) throw new Error("not caught");
   } catch (error) { if (error.message === "not caught") throw error; }
+});
+
+
+// Four findings from the first real-document trial (2026-10-19). The page said
+// "alone, and no one is named to get it" over routes the documents never
+// settled, "alone" over a half share, and "read in full" over documents read
+// in part, while leaving read documents off the list because no card cited them.
+// The text of one item's card: from its data-id to the next card's.
+const rowText = (svg, id) => { const i = svg.indexOf(`data-id="${id}"`); if (i < 0) throw new Error(`no row ${id}`); const j = svg.indexOf('class="bt-node"', i + 1); return svg.slice(i, j < 0 ? undefined : j).replace(/<[^>]+>/g, " ").replace(/\s+/g, " "); };
+
+test("an account whose beneficiary form is not in the documents never says no one is named", () => {
+  const raw = load("ellery");
+  raw.assets.k401.designation = { source: { status: "unknown", note: "no form in the documents" } };
+  if (!raw.views[1].bands.includes("unknown")) raw.views[1].bands.push("unknown");
+  const m = normalize(raw);
+  for (const render of [renderTransfer, renderTransferStacked]) {
+    const row = rowText(render(m, raw.views[1], { noteBadges: new Map() }).svg, "k401");
+    if (/no one is named to get it/.test(row)) throw new Error(`${render.name}: states absence as fact`);
+    if (!/documents don’t show who gets it/.test(row)) throw new Error(`${render.name}: unknown route not explained`);
+  }
+});
+
+test("a half share is never called \"alone\"", () => {
+  const raw = load("ellery");
+  raw.holdings = raw.holdings.filter((h) => h.held !== "home");
+  raw.holdings.push({ holder: "sam", held: "home", share: 0.5, source: { doc: "deed-home", at: "p. 1" } }, { holder: "dana", held: "home", share: 0.5, source: { doc: "deed-home", at: "p. 1" } });
+  raw.views[1].bands = ["title", "contract", "agreement", "trust", "probate"];
+  const m = normalize(raw);
+  for (const render of [renderTransfer, renderTransferStacked]) {
+    const row = rowText(render(m, raw.views[1], { noteBadges: new Map() }).svg, "home");
+    if (/Sam’s alone/.test(row)) throw new Error(`${render.name}: half share called alone`);
+    if (!/Sam’s half/.test(row)) throw new Error(`${render.name}: half share not named`);
+  }
+});
+
+test("the footer never says read in full over a document read in part", () => {
+  const raw = load("ellery");
+  raw.documents.trust.read = "partial";
+  raw.documents.trust.readNote = "pp. 1 to 4 of 30";
+  const m = normalize(raw);
+  const r = readReceipt(m);
+  if (/read in full$/.test(r.text) || !/1 in part/.test(r.text)) throw new Error(r.text);
+  const full = readReceipt(normalize(load("ellery")));
+  if (!/were read in full/.test(full.text)) throw new Error(full.text);
+});
+
+test("a document that was read is listed even when no card cites it", () => {
+  const raw = load("ellery");
+  raw.documents.sidecar = { title: "A letter from counsel", short: "Letter", read: "read" };
+  raw.intake = raw.intake ?? {};
+  const listed = documentsLookedAt(normalize(raw));
+  if (!listed.includes("sidecar")) throw new Error("read document left off the list");
+  raw.documents.sidecar.read = "unreadable";
+  if (documentsLookedAt(normalize(raw)).includes("sidecar")) throw new Error("unreadable document listed as looked at");
 });
 
 console.log(failures ? `\n${failures} failed` : "\nall passed");

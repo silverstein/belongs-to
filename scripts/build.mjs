@@ -14,6 +14,7 @@ import { renderStructureStacked } from "../kit/structure-stacked.mjs";
 import { renderQsbsLedger } from "../kit/ledger.mjs";
 import { auditLayout } from "../kit/audit.mjs";
 import { pageHtml } from "../kit/page.mjs";
+import { documentsLookedAt, readReceipt } from "../kit/receipt.mjs";
 
 const args = process.argv.slice(2);
 const input = args.find((a) => !a.startsWith("--"));
@@ -28,7 +29,7 @@ for (const c of facts.checks) console.log(`  ${c.passed ? "ok " : "!! "} ${c.nam
 if (facts.open.length) console.log(`  open facts shown on the page: ${facts.open.length}\n      ${facts.open.map((o) => `${o.status}: ${o.where}`).join("\n      ")}`);
 
 mkdirSync(outDir, { recursive: true });
-const citedDocs = Object.keys(model.documents).filter((id) => JSON.stringify(model.raw.parties ?? {}).includes(`"doc":"${id}"`) || JSON.stringify(model.raw).includes(`"doc":"${id}"`));
+const citedDocs = documentsLookedAt(model);
 let failed = !facts.ok;
 
 for (const view of model.views) {
@@ -45,8 +46,7 @@ for (const view of model.views) {
   if (openHere.length) receipt.push({ text: `${openHere.length === 1 ? "One thing" : `${openHere.length} things`} the documents don’t answer. We said so instead of guessing${openLetters.length ? ` (${openLetters.length === 1 ? "note" : "notes"} ${openLetters.join(", ")})` : ""}`, open: true });
   const illustrative = facts.open.filter((o) => o.status === "illustrative");
   const notIn = footerMissing(model).length;
-  const readCount = Object.values(model.documents).filter((d) => d.read === "read" || d.read === "partial").length;
-  if (checkNamed("intake recorded")) receipt.push({ text: `All ${readCount} documents listed under “What we looked at” were read in full` });
+  if (checkNamed("intake recorded")) receipt.push(readReceipt(model, citedDocs));
   if (notIn) receipt.push({ text: `${notIn} ${notIn === 1 ? "thing" : "things"} we looked for and couldn’t find, listed here`, open: true });
   if (illustrative.length) receipt.push({ text: `The sale price is an example, not a real offer`, open: true });
 

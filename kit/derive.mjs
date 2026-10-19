@@ -64,7 +64,7 @@ export function deathRoutes(model, eventId) {
       if (item.designation.source?.status === "unknown") {
         route = "unknown";
         to = [];
-        detail = "No beneficiary form in the documents";
+        detail = item.kind === "property" ? "The deed isn’t in the documents" : item.kind === "vehicle" ? "The title isn’t in the documents" : "No beneficiary form in the documents";
       } else {
         const picked = pickBeneficiaries(item.designation, event);
         if (picked) {
@@ -249,4 +249,25 @@ export function qsbsLedger(model, eventId, taxpayers) {
   const band = rows[0]?.band ?? QSBS_RULES.bands[2];
   const singleCap = Math.min(totalGain, Math.max(band.cap, 10 * totalBasis)) * (rows[0]?.pct ?? 1);
   return { event, issuer, rows, assumptions, checklist, missing, unsupported, total: rows.reduce((sum, row) => sum + row.excludable, 0), singleCap };
+}
+
+// The sentence under an item on the transfer view: whose it is, and what
+// governs it. A route the documents don't settle says so; it never claims
+// "no one is named" unless a form or agreement was read and names no one.
+// A fractional holding says "half" or the share, never "alone".
+export function holdLine(model, event, row) {
+  const who = model.nodes[event.who];
+  const node = row.item;
+  if (row.ownedBy) return `Owned by ${row.ownedBy.map((id) => shortName(model.nodes[id])).join(" and ")}`;
+  if (row.via) return `In ${inSentence(shortName(model.nodes[row.via]))}`;
+  if (row.holding?.joint) return `Joint with ${row.holding.holders.filter((h) => h !== event.who).map((h) => shortName(model.nodes[h])).join(", ")}`;
+  const fraction = row.holding?.fraction ?? 1;
+  const part = fraction >= 1 ? null : fraction === 0.5 ? "half" : fraction === 1 / 3 ? "third" : fraction === 0.25 ? "quarter" : `${Math.round(fraction * 100)}% share`;
+  const mine = part ? `${shortName(who)}’s ${part}` : `${shortName(who)}’s`;
+  if (row.route === "contract") return `${mine}, and a form says who gets it`;
+  if (row.route === "agreement") return `${mine}, and the agreement says who steps in`;
+  if (row.route === "unknown" || node.designation?.source?.status === "unknown") return `${mine}, and the documents don’t show who gets it`;
+  if (node.llc && node.llc.source?.status === "unknown") return `${mine}, and the documents don’t show who steps in`;
+  if (node.designation && !(node.designation.primary ?? []).length) return `${mine}, and no one is named to get it`;
+  return part ? `${mine}, and no one is named to get it` : `${mine} alone, and no one is named to get it`;
 }

@@ -3,7 +3,7 @@
 // stays inside its own band, and lines meet their recipients in the gutter.
 // A line never crosses another mechanism's band, so it can't seem to pass
 // through probate when it doesn't.
-import { deathRoutes, ROUTES } from "./derive.mjs";
+import { deathRoutes, ROUTES, holdLine } from "./derive.mjs";
 import { shortName } from "./model.mjs";
 import { kindLabel } from "./structure.mjs";
 import { measure, wrap, esc, money, inSentence } from "./text.mjs";
@@ -31,6 +31,8 @@ export function renderTransfer(model, view, { noteBadges }) {
   const recipX = stationX + stationW + gutter;
   const width = recipX + recipW + M;
   const headH = 52, bandHead = 40, rowH = 60, rowGap = 12, bandGap = 14, bandPadB = 14;
+  // The sentence under each item may need two lines; the row grows with it.
+  for (const row of all) { row.holdLines = wrap(holdLine(model, event, row), "detail", assetW - 52, 2); row.h = rowH + (row.holdLines.length - 1) * 16; }
 
   // Bands in mechanism order, rows inside them in authored order.
   const bands = [];
@@ -41,10 +43,10 @@ export function renderTransfer(model, view, { noteBadges }) {
     const rows = picked.filter((r) => r.route === route);
     if (!rows.length) continue;
     const fixes = rows.filter((r) => view.fixes?.[r.id]).length;
-    const h = bandHead + rows.length * rowH + (rows.length - 1) * rowGap + bandPadB + fixes * 26;
+    const h = bandHead + rows.reduce((s, row) => s + row.h, 0) + (rows.length - 1) * rowGap + bandPadB + fixes * 26;
     bands.push({ route, rows, y, h });
     let cy = y + bandHead;
-    rows.forEach((row) => { row.y = cy; cy += rowH + rowGap + (view.fixes?.[row.id] ? 26 : 0); });
+    rows.forEach((row) => { row.y = cy; cy += row.h + rowGap + (view.fixes?.[row.id] ? 26 : 0); });
     y += h + bandGap;
   }
   const bodyBottom = y - bandGap;
@@ -57,7 +59,7 @@ export function renderTransfer(model, view, { noteBadges }) {
   for (const row of rows) for (const entry of row.to) recipients.find((r) => r.id === entry.to)?.flows.push({ ...row, value: row.value == null ? null : row.value * entry.share, route: row.route, y: row.y, id: row.id });
   let cursor = headH;
   const recipLayout = recipients.map((recip) => {
-    const ys = recip.flows.map((row) => row.y + rowH / 2);
+    const ys = recip.flows.map((row) => row.y + row.h / 2);
     const known = recip.flows.every((row) => row.value != null);
     const sum = (list) => list.reduce((s, row) => s + (row.value ?? 0), 0);
     // Three different things: money that arrives without a court, property
@@ -67,7 +69,7 @@ export function renderTransfer(model, view, { noteBadges }) {
     const court = recip.flows.filter((row) => ROUTES[row.route].court);
     const preTax = recip.flows.filter((row) => row.item?.taxTreatment === "pre-tax");
     const lines = [];
-    if (!known) lines.push({ text: "No total: one value isn’t in the documents", tone: "ask" });
+    if (!known) lines.push({ text: "No total: one value is missing", tone: "ask" });
     else {
       if (arrives.length) lines.push({ text: `${money(sum(arrives))} with no court`, tone: "", key: "arrives", amount: sum(arrives), suffix: " with no court" });
       if (preTax.length) lines.push({ text: `Income tax is still owed on ${money(sum(preTax))} of it`, tone: "sub", key: "pretax", amount: sum(preTax), prefix: "Income tax is still owed on ", suffix: " of it" });
@@ -113,7 +115,7 @@ export function renderTransfer(model, view, { noteBadges }) {
   }
   const flows = [];
   for (const row of rows) {
-    const y0 = row.y + rowH / 2;
+    const y0 = row.y + row.h / 2;
     const court = ROUTES[row.route].court;
     for (const entry of row.to) {
       const w = row.route === "trust" ? 2 : flowW(row.value == null ? null : row.value * entry.share);
@@ -138,10 +140,9 @@ export function renderTransfer(model, view, { noteBadges }) {
     const { y, item: node } = row;
     const badges = noteBadges.get(row.id) ?? [];
     const court = ROUTES[row.route].court;
-    // Say what governs each item, so the red "name alone" belongs only to the court route.
-    const holdText = row.ownedBy ? `Owned by ${row.ownedBy.map((id) => shortName(model.nodes[id])).join(" and ")}` : row.via ? `In ${inSentence(shortName(model.nodes[row.via]))}` : row.holding.joint ? `Joint with ${row.holding.holders.filter((h) => h !== event.who).map((h) => shortName(model.nodes[h])).join(", ")}` : row.route === "contract" ? `${shortName(who)}’s, and a form says who gets it` : row.route === "agreement" ? `${shortName(who)}’s, and the agreement says who steps in` : node.designation && node.designation.source?.status !== "unknown" && !(node.designation.primary ?? []).length ? `${shortName(who)}’s, and no one is named to get it` : `${shortName(who)}’s alone, and no one is named to get it`;
+    // Say what governs each item; the wording lives with the routing rules in derive.mjs.
     out.push(`<g class="bt-node" data-id="${esc(row.id)}" tabindex="0" role="group" aria-label="${esc(node.name)}">`);
-    out.push(`<rect class="bt-card bt-asset${court ? " bt-t-flag" : ""}" x="${M}" y="${y}" width="${assetW}" height="${rowH}" rx="10"/>`);
+    out.push(`<rect class="bt-card bt-asset${court ? " bt-t-flag" : ""}" x="${M}" y="${y}" width="${assetW}" height="${row.h}" rx="10"/>`);
     out.push(icon(iconFor(node), M + 14, y + 12, 15, "bt-icon"));
     const valueText = row.value == null ? "Not in documents" : money(row.value);
     const valueW = measure(valueText, "value");
@@ -149,15 +150,15 @@ export function renderTransfer(model, view, { noteBadges }) {
     const nameMax = assetW - 38 - 14 - valueW - 12 - badgeW;
     const name = measure(node.name, "name") <= nameMax ? node.name : shortName(node);
     out.push(`<text class="bt-name" x="${M + 38}" y="${y + 25}">${esc(wrap(name, "name", nameMax, 1)[0])}</text>`);
-    out.push(`<text class="bt-detail${court ? " bt-tone-flag" : ""}" x="${M + 38}" y="${y + 44}">${esc(holdText)}</text>`);
+    row.holdLines.forEach((line, k) => out.push(`<text class="bt-detail${court ? " bt-tone-flag" : ""}" x="${M + 38}" y="${y + 44 + k * 16}">${esc(line)}</text>`));
     out.push(`<text class="bt-value${row.value == null ? " bt-tone-ask" : ""}" x="${M + assetW - 14 - badgeW}" y="${y + 25}" text-anchor="end">${esc(valueText)}</text>`);
     badges.forEach((badge, k) => { const cx = M + assetW - 16 - k * 22, cy = y + 20; out.push(`<g class="bt-badge bt-tone-${badge.tone}"><circle cx="${cx}" cy="${cy}" r="9.5"/><text x="${cx}" y="${cy + 3.8}" text-anchor="middle">${badge.letter}</text></g>`); });
     out.push(`</g>`);
-    boxes.push({ id: row.id, x: M, y, w: assetW, h: rowH });
+    boxes.push({ id: row.id, x: M, y, w: assetW, h: row.h });
 
     const lines = wrap(row.detail, "detail", stationW - (court ? 46 : 28), 2);
-    const sh = court ? rowH : Math.max(34, 14 + lines.length * 16);
-    const sy = y + rowH / 2 - sh / 2;
+    const sh = court ? row.h : Math.max(34, 14 + lines.length * 16);
+    const sy = y + row.h / 2 - sh / 2;
     out.push(`<g class="bt-station${court ? " bt-station-court" : ""}" data-station="${esc(row.id)}"><rect x="${stationX}" y="${sy}" width="${stationW}" height="${sh}" rx="${court ? 9 : sh / 2}"/>`);
     if (court) {
       out.push(icon("clock", stationX + 12, sy + 11, 15, "bt-icon bt-icon-flag"));
@@ -168,7 +169,7 @@ export function renderTransfer(model, view, { noteBadges }) {
     }
     out.push(`</g>`);
     boxes.push({ id: `station-${row.id}`, x: stationX, y: sy, w: stationW, h: sh, station: true });
-    if (view.fixes?.[row.id]) out.push(`<text class="bt-fix" data-fix="${esc(row.id)}" x="${M + 2}" y="${y + rowH + 20}"><tspan class="bt-fix-label">The fix:</tspan> ${esc(view.fixes[row.id])}</text>`);
+    if (view.fixes?.[row.id]) out.push(`<text class="bt-fix" data-fix="${esc(row.id)}" x="${M + 2}" y="${y + row.h + 20}"><tspan class="bt-fix-label">The fix:</tspan> ${esc(view.fixes[row.id])}</text>`);
   }
 
   // Recipients.
