@@ -105,7 +105,9 @@ export function todosFromIntake(model) {
   return (model.raw.intake?.lookedFor ?? []).filter((i) => i.result !== "found" && i.todo).map((i) => i.todo);
 }
 export function footerMissing(model) {
-  const items = (model.raw.intake?.lookedFor ?? []).filter((i) => i.result !== "found" && !i.todo);
+  // An intake row that points at a document the register already lists as
+  // unreadable or not provided would print twice; the register's line wins.
+  const items = (model.raw.intake?.lookedFor ?? []).filter((i) => i.result !== "found" && !i.todo && !(i.doc && ["unreadable", "not-provided"].includes(model.documents[i.doc]?.read)));
   const unreadable = Object.entries(model.documents).filter(([, d]) => d.read === "unreadable" || d.read === "not-provided").map(([id, d]) => `${d.title}${d.read === "unreadable" ? " (could not be read)" : " (not provided)"}`);
   return [...items.map((i) => `${i.what}${i.result === "unreadable" ? " (could not be read)" : ""}${i.note ? `: ${i.note}` : ""}`), ...unreadable];
 }

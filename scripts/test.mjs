@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { normalize } from "../kit/model.mjs";
+import { normalize, footerMissing } from "../kit/model.mjs";
 import { verify } from "../kit/verify.mjs";
 import { deathRoutes, qsbsLedger, anniversary, qsbsRegime } from "../kit/derive.mjs";
 import { renderStructure } from "../kit/structure.mjs";
@@ -487,6 +487,35 @@ test("a note that cites a document by a short name the footer doesn't list fails
   const r = verify(normalize(fine));
   const c = r.checks.find((x) => x.name === "prose citations name a listed document");
   if (!c.passed) throw new Error(c.problems.join("; "));
+});
+
+
+test("a policy on the trust's schedule with no beneficiary form in the documents stays a gap", () => {
+  const raw = scheduled();
+  raw.assets.life.trustSchedule = { trust: "trust", source: { doc: "trust", at: "Schedule A, p. 30" } };
+  raw.assets.life.designation = { source: { status: "unknown", note: "no form in the documents" } };
+  delete raw.assets.life.successorOwner;
+  raw.views[1].bands.push("unknown");
+  const row = deathRoutes(normalize(raw), "sam-dies").find((r) => r.id === "life");
+  if (row.route !== "unknown" || !/form decides/.test(row.detail)) throw new Error(`${row.route}: ${row.detail}`);
+});
+
+test("a prose citation matches the short name whichever apostrophe it uses", () => {
+  const raw = load("ellery");
+  raw.documents["will-sam"].short = "Sam's will";
+  raw.views[0].notes[0].body += " (Sam’s will, p. 2).";
+  const r = verify(normalize(raw));
+  const c = r.checks.find((x) => x.name === "prose citations name a listed document");
+  if (!c.passed) throw new Error(c.problems.join("; "));
+});
+
+test("an unreadable document is listed once under what's missing, not twice", () => {
+  const raw = load("ellery");
+  raw.documents.scan = { title: "Deed scan", short: "Scan", read: "unreadable" };
+  raw.intake = raw.intake ?? {};
+  raw.intake.lookedFor = [...(raw.intake.lookedFor ?? []), { what: "Deed scan", result: "unreadable", doc: "scan" }];
+  const lines = footerMissing(normalize(raw));
+  if (lines.filter((l) => /Deed scan/.test(l)).length !== 1) throw new Error(lines.filter((l) => /Deed scan/.test(l)).join(" | "));
 });
 
 console.log(failures ? `\n${failures} failed` : "\nall passed");

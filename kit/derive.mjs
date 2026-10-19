@@ -71,11 +71,15 @@ export function deathRoutes(model, eventId) {
     } else if (item.designation) {
       facts.push(item.designation.source);
       if (item.designation.source?.status === "unknown") {
-        if (declared) declare();
+        // A policy or plan pays whoever its form names; the trust's schedule
+        // can list it but cannot carry the proceeds past a form nobody has seen.
+        const formDecides = ["insurance", "retirement", "annuity"].includes(item.kind);
+        if (declared && !formDecides) declare();
         else {
+          if (declared) facts.push(item.trustSchedule.source);
           route = "unknown";
           to = [];
-          detail = item.kind === "property" ? "The deed isn’t in the documents" : item.kind === "vehicle" ? "The title isn’t in the documents" : "No beneficiary form in the documents";
+          detail = item.kind === "property" ? "The deed isn’t in the documents" : item.kind === "vehicle" ? "The title isn’t in the documents" : declared ? "No beneficiary form in the documents; the form decides, not the trust’s list" : "No beneficiary form in the documents";
         }
       } else {
         const picked = pickBeneficiaries(item.designation, event);

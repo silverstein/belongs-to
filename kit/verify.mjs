@@ -197,14 +197,15 @@ export function verify(model) {
   // 5c2. A citation written into prose ("(Trust schedule, p. 3)") must name a
   // document the footer lists by that short name, or the reader cannot find it.
   const proseCiteProblems = [];
-  const shorts = new Map(Object.entries(documents).filter(([, d]) => d.read === "read" || d.read === "partial").map(([id, d]) => [String(d.short ?? "").trim().toLowerCase(), id]));
+  const plain = (s) => String(s ?? "").replace(/[’‘]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
+  const shorts = new Map(Object.entries(documents).filter(([, d]) => d.read === "read" || d.read === "partial").map(([id, d]) => [plain(d.short), id]));
   const scan = (text, where) => {
     for (const m of String(text ?? "").matchAll(/\(([^()]*?)\)/g)) {
       for (const part of m[1].split(";")) {
         if (!/(^|[\s,])pp?\.\s*\d/.test(part)) continue;
         const name = part.split(",")[0].trim();
         if (!name || /^(pp?\.|Art\.|§|notes?\b)/.test(name)) continue;
-        if (!shorts.has(name.toLowerCase())) proseCiteProblems.push(`${where} cites "${name}, …" but no readable document is listed with the short name "${name}"`);
+        if (!shorts.has(plain(name))) proseCiteProblems.push(`${where} cites "${name}, …" but no readable document is listed with the short name "${name}"`);
       }
     }
   };
