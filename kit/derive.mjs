@@ -289,7 +289,7 @@ export function holdLine(model, event, row) {
   const mine = part ? `${shortName(who)}’s ${part}` : `${shortName(who)}’s`;
   if (row.route === "contract") return `${mine}, and a form says who gets it`;
   if (row.route === "agreement") return `${mine}, and the agreement says who steps in`;
-  if (row.route === "declared") return `${mine} by title, and the trust’s list names it`;
+  if (row.route === "declared") return `${mine}, and the trust’s list names it`;
   if (row.route === "unknown" || node.designation?.source?.status === "unknown") return `${mine}, and the documents don’t show who gets it`;
   if (node.llc && node.llc.source?.status === "unknown") return `${mine}, and the documents don’t show who steps in`;
   if (node.designation && !(node.designation.primary ?? []).length) return `${mine}, and no one is named to get it`;

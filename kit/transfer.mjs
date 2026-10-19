@@ -14,7 +14,7 @@ export const BAND_TEXT = {
   agreement: { title: "Goes to whoever the LLC agreement names", sub: "The agreement says who steps in. No court.", icon: "llc" },
   title: { title: "Goes to the other name on it", sub: "Whoever is left on the account keeps it. No court.", icon: "key" },
   trust: { title: "Already in the trust", sub: "Nothing has to move. The trust’s own rules take over. No court.", icon: "trust" },
-  declared: { title: "On the trust’s list, but not in its name", sub: "Named on the trust’s schedule, still titled in one name. Usually one court step, not probate.", icon: "trust" },
+  declared: { title: "On the trust’s list, but not in its name", sub: "Named on the trust’s schedule; nothing here shows it retitled. Usually one court step, not probate.", icon: "trust" },
   probate: { title: "Goes to court first", sub: "Public record. Often months. Court and legal fees come out first.", icon: "court" },
   unknown: { title: "The documents don’t say", sub: "Nothing on file shows where this goes.", icon: "form" },
 };
@@ -71,7 +71,8 @@ export function renderTransfer(model, view, { noteBadges }) {
     const court = recip.flows.filter((row) => ROUTES[row.route].court);
     const preTax = recip.flows.filter((row) => row.item?.taxTreatment === "pre-tax");
     const lines = [];
-    if (!known) lines.push({ text: "No total: one value is missing", tone: "ask" });
+    const missing = recip.flows.filter((row) => row.value == null).length;
+    if (!known) lines.push({ text: missing === 1 ? "No total: one value is missing" : `No total: ${missing} values are missing`, tone: "ask" });
     else {
       if (arrives.length) lines.push({ text: `${money(sum(arrives))} with no court`, tone: "", key: "arrives", amount: sum(arrives), suffix: " with no court" });
       if (preTax.length) lines.push({ text: `Income tax is still owed on ${money(sum(preTax))} of it`, tone: "sub", key: "pretax", amount: sum(preTax), prefix: "Income tax is still owed on ", suffix: " of it" });

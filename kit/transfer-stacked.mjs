@@ -68,7 +68,8 @@ export function renderTransferStacked(model, view, { noteBadges }) {
     const listed = recip.flows.filter((f) => f.row.route === "declared");
     const court = recip.flows.filter((f) => ROUTES[f.row.route].court);
     const lines = [];
-    if (!known) lines.push({ text: "No total: one value is missing", tone: "ask" });
+    const missing = recip.flows.filter((f) => f.row.value == null).length;
+    if (!known) lines.push({ text: missing === 1 ? "No total: one value is missing" : `No total: ${missing} values are missing`, tone: "ask" });
     else {
       if (arrives.length) lines.push({ text: `${money(sum(arrives))} with no court`, key: "arrives", amount: sum(arrives), suffix: " with no court" });
       if (stays.length) lines.push({ text: `${money(sum(stays))} already here, nothing moves`, key: "stays", amount: sum(stays), suffix: " already here, nothing moves" });
