@@ -518,5 +518,17 @@ test("an unreadable document is listed once under what's missing, not twice", ()
   if (lines.filter((l) => /Deed scan/.test(l)).length !== 1) throw new Error(lines.filter((l) => /Deed scan/.test(l)).join(" | "));
 });
 
+
+test("a headline may not say there is no will when the documents only lack one", () => {
+  const raw = load("ellery");
+  raw.parties.sam.will = { source: { status: "unknown", note: "no will in the documents" } };
+  raw.views[1].title = "If Sam died, there is no will and the state decides.";
+  expectFail(raw, "absence said as absence", /states as fact what the documents don't show/);
+  raw.views[1].title = "If Sam died, there is no will in the documents, so the state's list would decide.";
+  const r = verify(normalize(raw));
+  const c = r.checks.find((x) => x.name === "absence said as absence");
+  if (!c.passed) throw new Error(c.problems.join("; "));
+});
+
 console.log(failures ? `\n${failures} failed` : "\nall passed");
 process.exit(failures ? 1 : 0);

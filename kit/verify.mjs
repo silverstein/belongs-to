@@ -192,6 +192,16 @@ export function verify(model) {
     if (note.on && unknownNodes.has(note.on) && !/document|on file|paperwork|isn’t in|isn't in|nothing (here|shows)/i.test(`${note.title} ${note.body}`)) absenceProblems.push(`${view.id}: the note on ${note.on} states a missing fact without saying it is missing from the documents`);
     if (/\b(never|everything they own|all they own)\b/i.test(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`)) absenceProblems.push(`${view.id}: "${(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`.match(/\b(never|everything they own|all they own)\b/i) ?? [])[0]}" claims more than the documents can show`);
   }
+  // A headline is the sentence the family reads first. When a will's status is
+  // unknown, "there is no will" is a claim the documents don't make.
+  const willUnknown = Object.values(nodes).some((n) => n.will?.source?.status === "unknown");
+  if (willUnknown) for (const view of model.views) {
+    const head = `${view.title} ${view.subtitle ?? ""} ${view.kicker ?? ""}`;
+    for (const m of head.matchAll(/\b(there is no will|no will for \w+|without a will|has no will|left no will)\b/gi)) {
+      const after = head.slice(m.index + m[0].length, m.index + m[0].length + 48);
+      if (!/in (the|these|your) documents|on file|we (have|were sent)|in what (we|you) (have|sent)|is in the documents/i.test(after)) absenceProblems.push(`${view.id} title: "${m[0]}" states as fact what the documents don't show; say "no will in the documents"`);
+    }
+  }
   check("absence said as absence", [...new Set(absenceProblems)]);
 
   // 5c2. A citation written into prose ("(Trust schedule, p. 3)") must name a
