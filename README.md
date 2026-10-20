@@ -22,7 +22,7 @@ It won't draw what it can't point to. Every card names the document and page it 
 
 Three limits. If it misreads a page, the drawing will be confidently wrong; that is why every card names its page, so you can check it in thirty seconds. It knows the general rules (how property passes at a death, the QSBS date bands) and says which situations it doesn't cover, such as community property and state probate shortcuts. And it never writes the fix: it tells you an assignment or a beneficiary form would close the gap, and your attorney writes it.
 
-No human attorney has reviewed a real family's output yet; one real household has been through a blind AI attorney panel and a judge, which scored the first build 4 out of 10 and drove the fixes in the latest release. How the examples were checked, and what the checks can and can't catch, is in [CONTRIBUTING.md](CONTRIBUTING.md).
+No human attorney has reviewed a real family's output yet; one real household has been through a blind AI attorney panel and a judge three times, scoring 4, then 6, then 7 out of 10, and each round's findings became checks in this release. The judge's verdict: a document map a careful attorney can work from, not yet a page a family relies on alone. How the examples were checked, and what the checks can and can't catch, is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Your documents
 
