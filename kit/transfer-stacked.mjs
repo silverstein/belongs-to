@@ -34,10 +34,12 @@ export function renderTransferStacked(model, view, { noteBadges }) {
   for (const route of bandList) {
     const rows = picked.filter((r) => r.route === route);
     if (!rows.length) continue;
-    let cy = y + bandHead;
+    // The band's subtitle may take two lines on a phone; the band grows with it.
+    const subLines = wrap(BAND_TEXT[route].sub, "laneSub", cardW - 20, 2);
+    let cy = y + bandHead + (subLines.length - 1) * 15;
     rows.forEach((row) => { row.y = cy; row.h = rowHOf(row); cy += row.h + rowGap + fixHOf(row); });
     const h = cy - y - rowGap + bandPadB;
-    bands.push({ route, rows, y, h });
+    bands.push({ route, rows, y, h, subLines });
     y += h + bandGap;
   }
   const rows = bands.flatMap((b) => b.rows);
@@ -96,7 +98,7 @@ export function renderTransferStacked(model, view, { noteBadges }) {
     out.push(`<g class="bt-bandg" data-band="${band.route}"><rect class="bt-band${court ? " bt-band-court" : ""}" x="${M - 6}" y="${band.y}" width="${cardW + 12}" height="${band.h}" rx="12"/>`);
     out.push(icon(text.icon, M + 4, band.y + 10, 13, `bt-icon${court ? " bt-icon-flag" : ""}`));
     out.push(`<text class="bt-bandhead${court ? " bt-tone-flag" : ""}" x="${M + 22}" y="${band.y + 20}">${esc(text.title.toUpperCase())}</text>`);
-    wrap(text.sub, "laneSub", cardW - 20, 1).forEach((line) => out.push(`<text class="bt-bandsub${court ? " bt-tone-flag" : ""}" x="${M + 4}" y="${band.y + 36}">${esc(line)}</text>`));
+    band.subLines.forEach((line, k) => out.push(`<text class="bt-bandsub${court ? " bt-tone-flag" : ""}" x="${M + 4}" y="${band.y + 36 + k * 15}">${esc(line)}</text>`));
     out.push(`</g>`);
   }
 

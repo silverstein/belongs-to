@@ -11,7 +11,7 @@ export const ROUTES = {
   agreement: { label: "The LLC agreement", court: false, order: 0.5 },
   title: { label: "Joint title", court: false, order: 1 },
   trust: { label: "The trust", court: false, order: 2 },
-  declared: { label: "On the trust’s list, not in its name", court: null, order: 2.5 },
+  declared: { label: "On the trust’s list; not shown retitled", court: null, order: 2.5 },
   probate: { label: "Will, through probate court", court: true, order: 3 },
   unknown: { label: "Not in documents", court: null, order: 4 },
 };

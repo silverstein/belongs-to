@@ -528,6 +528,14 @@ test("a headline may not say there is no will when the documents only lack one",
   const r = verify(normalize(raw));
   const c = r.checks.find((x) => x.name === "absence said as absence");
   if (!c.passed) throw new Error(c.problems.join("; "));
+  // The qualifier may come first, and a rule sentence may say "never".
+  raw.views[1].title = "The documents show no will for Sam, so the state's list would decide.";
+  raw.views[1].notes[0].body += " Gain built up before the conversion never qualifies.";
+  const r2 = verify(normalize(raw));
+  const c2 = r2.checks.find((x) => x.name === "absence said as absence");
+  if (!c2.passed) throw new Error(c2.problems.join("; "));
+  raw.views[1].notes[0].body += " The LLC was never assigned to the trust.";
+  expectFail(raw, "absence said as absence", /never assigned/);
 });
 
 // Round two of the real-document trial: the trust's own text, title that the
@@ -557,6 +565,12 @@ test("a note on a listed asset may not say the deed decides when the trust ends 
   raw.parties.trust.trust.survivorship = { ends: true, source: { doc: "trust", at: "Art. 1C" } };
   raw.views[1].notes.find((n) => n.on === "home").body += " If the deed has survivorship, Dana keeps it, trust or no trust.";
   expectFail(raw, "absence said as absence", /trust or no trust/);
+  const honest = scheduled();
+  honest.parties.trust.trust.survivorship = { ends: true, source: { doc: "trust", at: "Art. 1C" } };
+  honest.views[1].notes.find((n) => n.on === "home").body += " Without a signed trust, the deed decides.";
+  const r = verify(normalize(honest));
+  const c = r.checks.find((x) => x.name === "absence said as absence");
+  if (!c.passed) throw new Error(c.problems.join("; "));
 });
 
 test("a headline may not assert title the documents don't show", () => {

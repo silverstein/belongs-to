@@ -14,7 +14,7 @@ export const BAND_TEXT = {
   agreement: { title: "Goes to whoever the LLC agreement names", sub: "The agreement says who steps in. No court.", icon: "llc" },
   title: { title: "Goes to the other name on it", sub: "Whoever is left on the account keeps it. No court.", icon: "key" },
   trust: { title: "Already in the trust", sub: "Nothing has to move. The trust’s own rules take over. No court.", icon: "trust" },
-  declared: { title: "On the trust’s list, but not in its name", sub: "Named on the trust’s schedule; nothing here shows it retitled. Usually one court step, not probate.", icon: "trust" },
+  declared: { title: "On the trust’s list; the papers don’t show it retitled", sub: "Named on the trust’s schedule. Usually one court step, not probate.", icon: "trust" },
   probate: { title: "Goes to court first", sub: "Public record. Often months. Court and legal fees come out first.", icon: "court" },
   unknown: { title: "The documents don’t say", sub: "Nothing on file shows where this goes.", icon: "form" },
 };

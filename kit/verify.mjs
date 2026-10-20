@@ -225,7 +225,9 @@ export function verify(model) {
   const unknownNodes = new Set([...Object.values(nodes).filter((n) => ["designation", "value", "tax", "will"].some((k) => n[k]?.source?.status === "unknown")).map((n) => n.id), ...unknownForms.map((h) => h.held)]);
   for (const view of model.views) for (const note of view.notes ?? []) {
     if (note.on && unknownNodes.has(note.on) && !/document|on file|paperwork|isn’t in|isn't in|nothing (here|shows)/i.test(`${note.title} ${note.body}`)) absenceProblems.push(`${view.id}: the note on ${note.on} states a missing fact without saying it is missing from the documents`);
-    if (/\b(never|everything they own|all they own)\b/i.test(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`)) absenceProblems.push(`${view.id}: "${(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`.match(/\b(never|everything they own|all they own)\b/i) ?? [])[0]}" claims more than the documents can show`);
+    // "never assigned" is an absence stated as fact; "never qualifies" is a rule. Only the first kind is refused.
+    const over = `${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`.match(/\b(never (?:\w+ ){0,2}?(?:assigned|moved|signed|named|funded|retitled|filed|transferred|recorded|changed|updated|made|done|put|added|set up|executed|delivered|sent|given|got|had|was|were)\b|everything they own|all they own)\b/i);
+    if (over) absenceProblems.push(`${view.id}: "${over[0]}" claims more than the documents can show`);
   }
   // A headline is the sentence the family reads first. When a will's status is
   // unknown, "there is no will" is a claim the documents don't make.
@@ -234,7 +236,9 @@ export function verify(model) {
     const head = `${view.title} ${view.subtitle ?? ""} ${view.kicker ?? ""}`;
     for (const m of head.matchAll(/\b(there is no will|no will for \w+|without a will|has no will|left no will)\b/gi)) {
       const after = head.slice(m.index + m[0].length, m.index + m[0].length + 48);
-      if (!/in (the|these|your) documents|on file|we (have|were sent)|in what (we|you) (have|sent)|is in the documents/i.test(after)) absenceProblems.push(`${view.id} title: "${m[0]}" states as fact what the documents don't show; say "no will in the documents"`);
+      const before = head.slice(Math.max(0, m.index - 48), m.index);
+      const qualified = /in (the|these|your) documents|on file|we (have|were sent)|in what (we|you) (have|sent)|is in the documents/i.test(after) || /documents (show|say|list)|copies show|papers show/i.test(before);
+      if (!qualified) absenceProblems.push(`${view.id} title: "${m[0]}" states as fact what the documents don't show; say "no will in the documents"`);
     }
   }
   // Title is a fact about a deed or a statement. When the model carries an
@@ -255,8 +259,11 @@ export function verify(model) {
     const node = note.on && nodes[note.on];
     const trust = node?.trustSchedule && nodes[node.trustSchedule.trust];
     if (!trust?.trust?.survivorship?.ends) continue;
-    const m = `${note.title} ${note.body}`.match(/\b(trust or no trust|by a form|the (deed|form|title) decides|whatever the trust says|regardless of the trust)\b/i);
-    if (m) absenceProblems.push(`${view.id}: the note on ${note.on} says "${m[0]}", but the trust's own text ends survivorship for what it lists (${citeLabel(model, trust.trust.survivorship.source)}); say what the trust says and name the attorney's question`);
+    const text = `${note.title} ${note.body}`;
+    const m = text.match(/\b(trust or no trust|by a form|the (deed|form|title) decides|whatever the trust says|regardless of the trust)\b/i);
+    // "Without a signed trust, the deed decides" is the honest branch, not the claim this refuses.
+    const sentence = m ? text.slice(Math.max(0, text.lastIndexOf(".", m.index) + 1), (text.indexOf(".", m.index) + 1) || text.length) : "";
+    if (m && !/without a signed trust|if the trust was(n’t|n't| not| never) signed|unsigned|only without/i.test(sentence)) absenceProblems.push(`${view.id}: the note on ${note.on} says "${m[0]}", but the trust's own text ends survivorship for what it lists (${citeLabel(model, trust.trust.survivorship.source)}); say what the trust says and name the attorney's question`);
   }
   // A page that mentions a disclaimer trust owes the one fact that makes it urgent.
   for (const view of model.views) for (const note of view.notes ?? []) {
