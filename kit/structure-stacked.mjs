@@ -58,9 +58,9 @@ export function renderStructureStacked(model, view, { noteBadges }) {
     const incoming = holdingsOf(model, entry.id).filter((h) => h.holders.some((p) => placed.has(p)));
     if (!entry.shared && incoming.length === 1 && entry.depth > 0) {
       const h = incoming[0];
-      chips.push({ text: h.joint ? "Joint" : h.shares != null ? `${fmtShares(h.shares)} · ${pct(h.fraction)}` : pct(h.fraction), cls: "" });
+      chips.push({ text: h.joint ? "Joint" : h.formUnknown ? "Both names" : h.shares != null ? `${fmtShares(h.shares)} · ${pct(h.fraction)}` : pct(h.fraction), cls: "" });
     }
-    if (entry.shared) for (const h of incoming) for (const holder of h.holders) chips.push({ text: `${shortName(model.nodes[holder])}: ${h.joint ? "joint" : pct(h.fraction)}`, cls: "" });
+    if (entry.shared) for (const h of incoming) for (const holder of h.holders) chips.push({ text: `${shortName(model.nodes[holder])}: ${h.joint ? "joint" : h.formUnknown ? "named" : pct(h.fraction)}`, cls: "" });
     for (const r of (view.relations ?? []).filter((r) => r.to === entry.id && placed.has(r.from))) chips.push({ text: `${r.label} · ${shortName(model.nodes[r.from])}`, cls: "bt-chip-rel" });
     for (const g of (view.gaps ?? []).filter((g) => g.from === entry.id)) chips.push({ text: g.label, cls: "bt-chip-gap" });
     // Chips flow into rows of the card's width.

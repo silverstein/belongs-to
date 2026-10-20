@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { normalize, footerMissing } from "../kit/model.mjs";
 import { verify } from "../kit/verify.mjs";
 import { deathRoutes, qsbsLedger, anniversary, qsbsRegime } from "../kit/derive.mjs";
-import { renderStructure } from "../kit/structure.mjs";
+import { renderStructure, kindLabel } from "../kit/structure.mjs";
 import { renderTransfer } from "../kit/transfer.mjs";
 import { renderTransferStacked } from "../kit/transfer-stacked.mjs";
 import { auditLayout } from "../kit/audit.mjs";
@@ -528,6 +528,189 @@ test("a headline may not say there is no will when the documents only lack one",
   const r = verify(normalize(raw));
   const c = r.checks.find((x) => x.name === "absence said as absence");
   if (!c.passed) throw new Error(c.problems.join("; "));
+});
+
+// Round two of the real-document trial: the trust's own text, title that the
+// documents don't show, the disclaimer clock, community property, claims,
+// page coverage, and three strings that must never come back.
+
+test("a trust that ends survivorship for what it lists runs ahead of joint title", () => {
+  const raw = scheduled();
+  raw.holdings = raw.holdings.filter((h) => h.held !== "home");
+  raw.holdings.push({ holders: ["sam", "dana"], form: "joint-survivorship", held: "home", source: { doc: "deed-home", at: "p. 1" } });
+  const plain = deathRoutes(normalize(raw), "sam-dies").find((r) => r.id === "home");
+  if (plain.route !== "title") throw new Error(`without the term: ${plain.route}`);
+  raw.parties.trust.trust.survivorship = { ends: true, source: { doc: "trust", at: "Art. 1C" } };
+  const m = normalize(raw);
+  const row = deathRoutes(m, "sam-dies").find((r) => r.id === "home");
+  if (row.route !== "declared" || row.to[0].to !== "trust") throw new Error(`with the term: ${row.route}`);
+  if (Math.abs(row.value - m.nodes.home.value.usd / 2) > 1) throw new Error(`moved ${row.value}, want half`);
+  if (!/survivorship ends/.test(row.detail)) throw new Error(row.detail);
+  const text = rowText(renderTransfer(m, raw.views[1], { noteBadges: new Map() }).svg, "home");
+  if (!/Joint with Dana, and the trust’s list names it/.test(text)) throw new Error(text.slice(0, 160));
+  delete raw.parties.trust.trust.survivorship.source;
+  expectFail(raw, "every fact cited or marked", /survivorship has no source/);
+});
+
+test("a note on a listed asset may not say the deed decides when the trust ends survivorship", () => {
+  const raw = scheduled();
+  raw.parties.trust.trust.survivorship = { ends: true, source: { doc: "trust", at: "Art. 1C" } };
+  raw.views[1].notes.find((n) => n.on === "home").body += " If the deed has survivorship, Dana keeps it, trust or no trust.";
+  expectFail(raw, "absence said as absence", /trust or no trust/);
+});
+
+test("a headline may not assert title the documents don't show", () => {
+  const raw = scheduled();
+  raw.views[0].subtitle = "The house is still in your names, outside the trust.";
+  expectFail(raw, "absence said as absence", /still in your names/);
+  raw.views[0].subtitle = "The deed shows the house still in your names.";
+  raw.views[0].zones = [{ id: "z", label: "What the deed shows", members: ["home"], tone: "ok" }];
+  const r = verify(normalize(raw));
+  const c = r.checks.find((x) => x.name === "absence said as absence");
+  if (!c.passed) throw new Error(c.problems.join("; "));
+  raw.views[0].zones[0].label = "Still in your names";
+  expectFail(raw, "absence said as absence", /zone "Still in your names"/);
+});
+
+test("two names with no title form is a gap, never a 50/50 split with a beneficiary line", () => {
+  const raw = load("ellery");
+  raw.holdings = raw.holdings.filter((h) => h.held !== "home");
+  raw.holdings.push({ holders: ["sam", "dana"], form: "unknown", held: "home", source: { doc: "deed-home", at: "p. 1" } });
+  raw.views[1].bands.push("unknown");
+  raw.intake.lookedFor.push({ what: "How the house is titled", result: "missing", note: "the closing statement shows two names" });
+  const m = normalize(raw);
+  const row = deathRoutes(m, "sam-dies").find((r) => r.id === "home");
+  if (row.route !== "unknown" || !/how the title is held/.test(row.detail)) throw new Error(`${row.route}: ${row.detail}`);
+  if (Math.abs(row.value - m.nodes.home.value.usd / 2) > 1) throw new Error(`working share ${row.value}`);
+  const r = verify(m);
+  const c = r.checks.find((x) => x.name === "findings surfaced");
+  if (c.passed || !c.problems.some((p) => /how the title is held/.test(p))) throw new Error("no finding for the open title form");
+  raw.views[1].notes.push({ on: "home", tone: "ask", title: "The house is in both names; how it’s held isn’t in the documents.", body: "Pull the deed from the county recorder." });
+  const ok = verify(normalize(raw));
+  if (!ok.ok) throw new Error(ok.errors.join("; "));
+  const card = rowText(renderStructure(normalize(raw), raw.views[0], { noteBadges: new Map() }).svg, "home");
+  if (!/how it’s held isn’t in the documents/.test(card) || /Beneficiary/.test(card) || /50%/.test(card)) throw new Error(card.slice(0, 200));
+  for (const render of [renderTransfer, renderTransferStacked]) {
+    const text = rowText(render(normalize(raw), raw.views[1], { noteBadges: new Map() }).svg, "home");
+    if (!/Sam’s and Dana’s; how it’s held/.test(text)) throw new Error(`${render.name}: ${text.slice(0, 160)}`);
+  }
+  raw.holdings.find((h) => h.held === "home").holders = ["sam"];
+  expectFail(raw, "intake recorded", /form "unknown" with one holder/);
+});
+
+test("a disclaimer mentioned without its deadline fails", () => {
+  const raw = load("ellery");
+  raw.views[1].notes[1].body += " The survivor can disclaim part of it into the bypass trust.";
+  expectFail(raw, "absence said as absence", /nine months/);
+  raw.views[1].notes[1].body += " A disclaimer has to be made in writing within nine months of the death.";
+  const r = verify(normalize(raw));
+  const c = r.checks.find((x) => x.name === "absence said as absence");
+  if (!c.passed) throw new Error(c.problems.join("; "));
+});
+
+test("intestacy in a community-property state needs both branches in the note", () => {
+  const raw = load("ellery");
+  raw.jurisdiction = { state: "California", communityProperty: true, label: "California, a community-property state", source: { doc: "will-sam", at: "Art. 1" } };
+  raw.parties.sam.will = { source: { status: "unknown", note: "no will in the documents" } };
+  raw.intake.lookedFor.push({ what: "Sam's will", result: "missing" });
+  expectFail(raw, "absence said as absence", /community property and if any part is separate/);
+  raw.views[1].notes.find((n) => n.on === "birchllc").body += " If it is community property it goes to Dana; if any part was separate, that part is split with the children.";
+  const r = verify(normalize(raw));
+  const c = r.checks.find((x) => x.name === "absence said as absence");
+  if (!c.passed) throw new Error(c.problems.join("; "));
+  raw.views[1].recipients.push("intestacy");
+  raw.views[1].bands.push("unknown");
+  for (const render of [renderTransfer, renderTransferStacked]) {
+    const text = rowText(render(normalize(raw), raw.views[1], { noteBadges: new Map() }).svg, "intestacy");
+    if (!/community property, the spouse/.test(text)) throw new Error(`${render.name}: ${text.slice(0, 200)}`);
+  }
+});
+
+test("three round-two strings stay fixed: no 'by title', no 'still titled', a true missing count", () => {
+  const raw = scheduled();
+  raw.assets.home.value = { source: { status: "unknown", note: "no valuation" } };
+  raw.assets.elm.value = { source: { status: "unknown", note: "no valuation" } };
+  raw.views[1].recipients = ["dana", "trust"];
+  const m = normalize(raw);
+  for (const render of [renderTransfer, renderTransferStacked]) {
+    const svg = render(m, raw.views[1], { noteBadges: new Map() }).svg;
+    const text = svg.replace(/<[^>]+>/g, " ");
+    if (/by title/i.test(text)) throw new Error(`${render.name}: 'by title' is back`);
+    if (/still titled/i.test(text)) throw new Error(`${render.name}: 'still titled' is back`);
+    const trust = rowText(svg, "trust");
+    if (/one value is missing/.test(trust) || !/2 values are missing/.test(trust)) throw new Error(`${render.name}: ${trust.slice(0, 200)}`);
+  }
+});
+
+test("a citation outside a partial document's read pages fails, in a source and in prose", () => {
+  const raw = load("ellery");
+  raw.documents.trust.read = "partial";
+  raw.documents.trust.readNote = "pp. 1 to 4 and 9 of 30";
+  raw.holdings.find((h) => h.held === "home").source = { doc: "trust", at: "p. 12" };
+  expectFail(raw, "intake recorded", /outside the pages/);
+  raw.holdings.find((h) => h.held === "home").source = { doc: "trust", at: "p. 9" };
+  const fine = verify(normalize(raw));
+  const c = fine.checks.find((x) => x.name === "intake recorded");
+  if (!c.passed) throw new Error(c.problems.join("; "));
+  raw.views[0].notes[0].body += " The trust says so (Trust, p. 21).";
+  expectFail(raw, "prose citations name a listed document", /outside the pages/);
+});
+
+test("a claim on a company is cited and printed under the card", () => {
+  const raw = load("okafor");
+  raw.parties.opco.claims = [{ text: "a SAFE converts to 5% of common on the next round", source: { doc: "charter", at: "p. 1" } }];
+  const r = verify(normalize(raw));
+  if (!r.ok) throw new Error(r.errors.join("; "));
+  const card = rowText(renderStructure(normalize(raw), raw.views[0], { noteBadges: new Map() }).svg, "opco");
+  if (!/Claim on it: a SAFE/.test(card) || !/Claim: Charter/.test(card)) throw new Error(card.slice(0, 300));
+  delete raw.parties.opco.claims[0].source;
+  expectFail(raw, "every fact cited or marked", /claims\[0\] needs text and a source/);
+});
+
+test("a long name with no value wraps on the wide card instead of ending in an ellipsis", () => {
+  const raw = load("ellery");
+  raw.parties.birchllc.name = "Birch Avenue Holdings and Rentals LLC";
+  raw.assets.birch.value = { source: { status: "unknown", note: "no valuation" } };
+  raw.intake.lookedFor.push({ what: "A value for Birch", result: "missing" });
+  const text = rowText(renderTransfer(normalize(raw), raw.views[1], { noteBadges: new Map() }).svg, "birchllc");
+  if (/…/.test(text) || !/Rentals LLC/.test(text)) throw new Error(text.slice(0, 200));
+});
+
+test("a group under an LLC is 'other members', under a corporation 'other shareholders'", () => {
+  const corp = normalize(load("okafor"));
+  if (kindLabel(corp.nodes.others, corp) !== "Other shareholders") throw new Error(kindLabel(corp.nodes.others, corp));
+  const raw = load("ellery");
+  raw.parties.others = { kind: "group", name: "Two outside investors" };
+  raw.holdings.find((h) => h.held === "birchllc").share = 0.8;
+  raw.holdings.push({ holder: "others", held: "birchllc", share: 0.2, source: { doc: "birch-oa", at: "Sch. A" } });
+  const m = normalize(raw);
+  if (kindLabel(m.nodes.others, m) !== "Other members") throw new Error(kindLabel(m.nodes.others, m));
+});
+
+test("a party's cite reads 'Papers' unless the document is its formation paper", () => {
+  const raw = load("ellery");
+  raw.documents.amend = { title: "Amendment to the Birch operating agreement", short: "Birch amendment", kind: "Amendment", read: "read" };
+  raw.parties.birchllc.source = { doc: "amend", at: "p. 1" };
+  raw.holdings.push({ holder: "dana", held: "birchllc", share: 0.5, source: { doc: "amend", at: "p. 1" } });
+  raw.holdings.find((h) => h.held === "birchllc" && h.holder === "sam").share = 0.5;
+  const card = rowText(renderStructure(normalize(raw), raw.views[0], { noteBadges: new Map() }).svg, "birchllc");
+  if (!/Papers: Birch amendment/.test(card) || /Formed:/.test(card)) throw new Error(card.slice(0, 300));
+});
+
+test("share labels don't collide when a parent's child also has another parent", () => {
+  const raw = load("ellery");
+  raw.parties.others = { kind: "group", name: "An outside investor" };
+  raw.holdings.find((h) => h.held === "birchllc").share = 0.9;
+  raw.holdings.push({ holder: "others", held: "birchllc", share: 0.1, source: { doc: "birch-oa", at: "Sch. A" } });
+  raw.views[0].place.others = [3, 0];
+  raw.views[0].place.k401 = [0.5, 1];
+  const rendered = renderStructure(normalize(raw), raw.views[0], { noteBadges: new Map() });
+  const audit = auditLayout(rendered.geometry);
+  const collide = audit.problems.filter((p) => /labels .* collide/.test(p));
+  if (collide.length) throw new Error(collide.join("; "));
+  const sam = rendered.geometry.boxes.find((b) => b.id === "sam");
+  const ninety = rendered.geometry.labels.find((l) => l.text === "90%");
+  if (!ninety || ninety.y < sam.y + sam.h) throw new Error(`90% label at ${ninety?.y}, Sam's card ends at ${sam.y + sam.h}`);
 });
 
 console.log(failures ? `\n${failures} failed` : "\nall passed");

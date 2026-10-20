@@ -36,7 +36,8 @@ Cite a legal conclusion (grantor-trust status, disregarded-entity status, C-corp
 - `jurisdiction` is required whenever there is an event. Cite the document that establishes residence (a return, an intake note, a will's recital). `communityProperty` is the legal classification of that state, not a document fact; the kit applies it as law.
 - `short` is how a document is cited on cards, so keep it to one or two words. Shorts must be unique: three documents all called "Statement" can't be told apart.
 - Every document carries `read`: `read`, `partial` (with `readNote` saying which pages, for example "pp. 1 to 6 of 40"), `unreadable` (a scan the agent could not read) or `not-provided` (the household mentioned it but did not hand it over). A citation into an `unreadable` or `not-provided` document fails the build. Unread documents still belong in the list, because "we knew about it and could not read it" is a finding.
-- A trust or will document may carry `signed`: `signed` (signatures and, where needed, witnesses or a notary appear on the copy), `unsigned` (the copy shows blank signature lines) or `unknown` (the copy doesn't show the signature pages). It is required on the trust's document when any asset is drawn as the trust's through `trustSchedule`, because that route only holds if the papers were signed.
+- A trust, will, certification, bill of transfer, power of attorney or health care directive may carry `signed`: `signed` (signatures and, where needed, witnesses or a notary appear on the copy), `unsigned` (the copy shows blank signature lines) or `unknown` (the copy doesn't show the signature pages). It is required on the trust's document when any asset is drawn as the trust's through `trustSchedule`, because that route only holds if the papers were signed. The footer prints "(copy unsigned)" or "(signature pages not in the copy)" beside any document that carries it.
+- A document read in part says which pages in `readNote` ("pp. 1 to 6, 20 and 27 of 40"). Every citation into that document, in a `source.at` or in a note's prose, must land on one of those pages, or the build fails: you can't cite a page you never opened.
 - A citation written into a note's prose, such as "(Trust schedule, p. 3)", must use a listed document's `short` exactly, or the build fails: the reader finds the page through the footer list.
 
 ## Intake
@@ -84,7 +85,11 @@ The intake record is what the agent looked for, before it modeled anything. It i
 - `marital` is required for every person a death event or a QSBS taxpayer group touches. `filing` is `single`, `joint` or `separate`.
 - `will` has three honest shapes. A will on file: `{ "kind": "pour-over", "residueTo": "trust", "source": { "doc": "will-sam", "at": "Art. 3" } }`. The documents say there is no will (an intake note, a questionnaire): `{ "none": true, "source": { "doc": "intake", "at": "p. 1" } }`. The documents don't say: `{ "source": { "status": "unknown", "note": "No will in the documents" } }`. With no will, anything that would pass under one goes to the virtual recipient `intestacy` ("whoever state law names"); list `"intestacy"` in a transfer view's `recipients` to draw it, and explain it in a note.
 - A beneficiary form that the document shows as empty is `"designation": { "primary": [], "source": { "doc": "roth-stmt", "at": "p. 2" } }`, which is different from `status: "unknown"`: the first is a known absence and routes the account through the estate; the second is a gap.
-- `trust.onDeath` is required, cited, for a revocable trust whose grantor dies in an event.
+- `trust.onDeath` is required, cited, for a revocable trust whose grantor dies in an event. `first` is `"continues"` (drawn as "Stays in the trust, which Dana now runs") or a short label for anything else (`"survivors-trust"`, `"splits"`), drawn as "Follows the trust's rules (Art. 3)". If the trust's terms include a disclaimer trust, any note that mentions it must state the nine-month deadline; see `references/law.md`.
+- `trust.survivorship: { "ends": true, "source": { "doc": "trust", "at": "Art. 1C" } }` records a trust whose text says survivorship ends for property it lists. It lets the trust's schedule run ahead of a joint-survivorship holding at a death; see rule 5 in `references/law.md`.
+- A party (an LLC, a corporation) can carry `trustSchedule` the same way an asset does, when the trust's schedule lists the interest.
+- `claims: [{ "text": "a SAFE converts to 5% of common on the next round", "source": { … } }]` on a corporation or LLC lists claims on the company that are not shares: a SAFE, a convertible note, phantom stock. Each is printed under the card as "Claim on it: …" with its cite, and stays off the cap table.
+- `detail` is a plain string for a label (an address, a custodian, a plan name). A fact that a reader would check goes in `{ "text": "20% of Wealth Factory", "label": "Holds", "source": { … } }` and is cited under the card like every other fact.
 
 ## Assets
 
@@ -112,6 +117,7 @@ The intake record is what the agent looked for, before it modeled anything. It i
 ```
 
 - Shares of anything add to 100%. A corporation's `shares` add to `corp.shares`. Use a `group` party for everyone else on a cap table.
+- `{ "holders": ["sam", "dana"], "form": "unknown", "held": "home", "source": { "doc": "closing", "at": "p. 1" } }` is two or more names on a document that doesn't say how title is held (a closing statement, a tax bill, an insurance page). The kit draws equal working shares labelled "Both names", prints "how it's held isn't in the documents" on the card, routes the asset to "The documents don't say" at a death, and counts the open form on the receipt. Don't write it as two 0.5 shares; that asserts a form the documents don't show. The deed settles it.
 - `acquired.how` is `original issuance` or `gift`. A gift has `from` and `tacksFrom`, which is the donor's acquisition date.
 
 ## Events

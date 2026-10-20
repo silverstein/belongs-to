@@ -6,7 +6,7 @@
 import { deathRoutes, ROUTES, holdLine } from "./derive.mjs";
 import { shortName } from "./model.mjs";
 import { kindLabel, roundedPath } from "./structure.mjs";
-import { BAND_TEXT, ORDER } from "./transfer.mjs";
+import { BAND_TEXT, ORDER, intestacyLine } from "./transfer.mjs";
 import { measure, wrap, esc, money, inSentence } from "./text.mjs";
 import { icon, iconFor } from "./icons.mjs";
 
@@ -20,7 +20,7 @@ export function renderTransferStacked(model, view, { noteBadges }) {
   const W = 420, M = 14, cardW = 282, gutterX = M + cardW + 14; // lanes live from gutterX to W - M - 6
   const bandHead = 46, baseRowH = 84, rowGap = 10, bandGap = 12, bandPadB = 12;
   const stationLinesOf = (row) => wrap(ROUTES[row.route].court ? `Court first. ${row.detail}` : row.detail, "laneSub", cardW - 54, 2);
-  const fixLinesOf = (row) => (view.fixes?.[row.id] ? wrap(view.fixes[row.id], "laneSub", cardW - 40, 2) : []);
+  const fixLinesOf = (row) => (view.fixes?.[row.id] ? wrap(view.fixes[row.id], "laneSub", cardW - 40, 3) : []);
   const holdLinesOf = (row) => wrap(holdLine(model, event, row), "detail", cardW - 42, 2);
   const rowHOf = (row) => baseRowH + (stationLinesOf(row).length - 1) * 13 + (holdLinesOf(row).length - 1) * 13;
   const fixHOf = (row) => (fixLinesOf(row).length ? 16 + fixLinesOf(row).length * 15 : 0);
@@ -77,8 +77,8 @@ export function renderTransferStacked(model, view, { noteBadges }) {
       if (court.length) lines.push({ text: `${money(sum(court))} after court, minus fees`, tone: "flag", key: "court", amount: sum(court), suffix: " after court, minus fees" });
     }
     const survivors = (event.survivors ?? []).map((id) => shortName(model.nodes[id]));
-    const subtitle = recip.node.kind === "law" ? "Usually the spouse and children, split the way the state’s rulebook says" : recip.node.kind === "person" ? `It becomes ${shortName(recip.node)}’s` : recip.node.trust?.onDeath?.trusteeAfter === "survivor" ? `${survivors.join(" and ")} now runs it alone` : "";
-    const subtitleLines = subtitle ? wrap(subtitle, "detail", cardW - 28, 2) : [];
+    const subtitle = recip.node.kind === "law" ? intestacyLine(model) : recip.node.kind === "person" ? `It becomes ${shortName(recip.node)}’s` : recip.node.trust?.onDeath?.trusteeAfter === "survivor" ? `${survivors.join(" and ")} now runs it alone` : "";
+    const subtitleLines = subtitle ? wrap(subtitle, "detail", cardW - 28, 3) : [];
     const h = 50 + subtitleLines.length * 16 + lines.length * 20 + 14;
     const box = { ...recip, x: M, y: ry, w: cardW, h, lines, subtitleLines, lane: i };
     ry += h + 14;

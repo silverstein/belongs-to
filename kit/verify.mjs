@@ -3,7 +3,25 @@
 // or openly marked unknown/assumed/illustrative, and every high-severity
 // finding the derivations produce is surfaced by a note in some view.
 import { isCited, holdingsOf, taxpayerOf, citeLabel, shortName, valueOf } from "./model.mjs";
-import { deathRoutes, qsbsLedger, QSBS_CONDITIONS, QSBS_RULES } from "./derive.mjs";
+import { deathRoutes, qsbsLedger, QSBS_CONDITIONS, QSBS_RULES, DISCLAIMER_RULE } from "./derive.mjs";
+
+// The pages a partial read covers, from its readNote ("pp. 1 to 6, 20 and
+// 27 of 40"). Null when the note names no pages, so nothing is enforced.
+export function pagesCovered(readNote) {
+  if (!readNote) return null;
+  const text = String(readNote).replace(/\bof\s+\d+\b/g, "");
+  if (!/\d/.test(text)) return null;
+  const pages = new Set();
+  for (const m of text.matchAll(/(\d+)\s*(?:to|through|-|–)\s*(\d+)/g)) for (let p = +m[1]; p <= +m[2]; p++) pages.add(p);
+  for (const m of text.replace(/(\d+)\s*(?:to|through|-|–)\s*(\d+)/g, " ").matchAll(/\d+/g)) pages.add(+m[0]);
+  return pages;
+}
+// The pages a citation names: "p. 21", "pp. 3 to 6", "Art. 4C, p. 7".
+export function pagesCited(at) {
+  const out = [];
+  for (const m of String(at ?? "").matchAll(/\bpp?\.\s*(\d+)(?:\s*(?:to|through|-|–)\s*(\d+))?/g)) { const a = +m[1], b = m[2] ? +m[2] : a; for (let p = a; p <= b; p++) out.push(p); }
+  return out;
+}
 
 const EPS = 1e-9;
 
@@ -34,6 +52,9 @@ export function verify(model) {
     collect(node, node.id);
     for (const key of ["value", "designation", "tax", "will", "corp", "llc", "trustSchedule"]) collect(node[key], `${node.id}.${key}`);
     collect(node.trust?.onDeath, `${node.id}.trust.onDeath`);
+    collect(node.trust?.survivorship, `${node.id}.trust.survivorship`);
+    if (node.detail && typeof node.detail === "object") collect(node.detail, `${node.id}.detail`);
+    for (const [i, claim] of (node.claims ?? []).entries()) collect(claim, `${node.id}.claims[${i}]`);
     for (const [key, fact] of Object.entries(node.qsbs ?? {})) collect(fact, `${node.id}.qsbs.${key}`);
   }
   for (const event of Object.values(model.events)) collect(event, `event ${event.kind}`);
@@ -49,14 +70,20 @@ export function verify(model) {
     if (!doc.read) intakeProblems.push(`document "${id}" has no read status (read, partial, unreadable or not-provided)`);
     else if (!READ.includes(doc.read)) intakeProblems.push(`document "${id}" has read status "${doc.read}", which is not one of ${READ.join(", ")}`);
     if (doc.read === "partial" && !doc.readNote) intakeProblems.push(`document "${id}" is partially read but readNote does not say which pages`);
+    if (doc.signed != null && !["signed", "unsigned", "unknown"].includes(doc.signed)) intakeProblems.push(`document "${id}" has signed: "${doc.signed}"; it is signed, unsigned or unknown`);
   }
+  // A citation into a document read in part must land on a page that was read.
+  const pageOk = (docId, at) => { const covered = pagesCovered(documents[docId]?.readNote); if (documents[docId]?.read !== "partial" || !covered) return true; return pagesCited(at).every((p) => covered.has(p)); };
   for (const { source, where } of sources) {
     const doc = source.doc && documents[source.doc];
     if (doc && ["unreadable", "not-provided"].includes(doc.read)) intakeProblems.push(`${where} cites "${source.doc}", which was ${doc.read === "unreadable" ? "not readable" : "not provided"}`);
+    if (doc && !pageOk(source.doc, source.at)) intakeProblems.push(`${where} cites "${source.doc}" at ${source.at}, outside the pages its readNote says were read (${doc.readNote})`);
   }
   const intake = model.raw.intake;
   const unknownFacts = sources.filter(({ source }) => source.status === "unknown");
-  if (unknownFacts.length || model.raw.notInDocuments) {
+  const unknownForms = holdings.filter((h) => h.formUnknown);
+  for (const h of unknownForms) if (h.holders.length < 2) intakeProblems.push(`holding → ${h.held} has form "unknown" with one holder; that form is for two or more names whose title form the documents don't show`);
+  if (unknownFacts.length || unknownForms.length || model.raw.notInDocuments) {
     if (!intake?.lookedFor?.length) intakeProblems.push(`facts are marked "not in the documents" but intake.lookedFor does not record what was searched`);
   }
   for (const item of intake?.lookedFor ?? []) {
@@ -77,6 +104,9 @@ export function verify(model) {
     if (node.tax && !isCited(node.tax.source)) citeProblems.push(`${node.id} tax treatment has no source`);
     if (node.will && !isCited(node.will.source)) citeProblems.push(`${node.id} will has no source`);
     if (node.trustSchedule && !isCited(node.trustSchedule.source)) citeProblems.push(`${node.id} trustSchedule has no source (cite the schedule's page)`);
+    if (node.trust?.survivorship && !isCited(node.trust.survivorship.source)) citeProblems.push(`${node.id} trust.survivorship has no source (cite the article that ends survivorship for listed property)`);
+    if (node.detail && typeof node.detail === "object" && (!node.detail.text || !isCited(node.detail.source))) citeProblems.push(`${node.id} detail needs text and a source, or write it as a plain label string`);
+    for (const [i, claim] of (node.claims ?? []).entries()) if (!claim.text || !isCited(claim.source)) citeProblems.push(`${node.id} claims[${i}] needs text and a source`);
     if (node.virtual) continue;
     if (node.trust?.onDeath && !isCited(node.trust.onDeath.source)) citeProblems.push(`${node.id} trust terms on death have no source`);
     if (!node.isAsset && node.kind !== "person" && !isCited(node.source)) citeProblems.push(`${node.id} has no formation document`);
@@ -90,7 +120,7 @@ export function verify(model) {
   const okFraction = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 && v <= 1 + EPS;
   const okShares = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 && Number.isInteger(v);
   for (const h of holdings) {
-    if (h.joint) continue;
+    if (h.joint || h.formUnknown) continue;
     if (h.shares != null) { if (!okShares(h.shares)) closeProblems.push(`holding ${h.holders.join("+")} → ${h.held}: shares must be a positive whole number, got ${JSON.stringify(h.shares)}`); }
     else if (!okFraction(h.share)) closeProblems.push(`holding ${h.holders.join("+")} → ${h.held}: share must be a number above 0 and at most 1, got ${JSON.stringify(h.share)}`);
   }
@@ -105,7 +135,8 @@ export function verify(model) {
       const total = rows.reduce((sum, h) => sum + (h.shares ?? 0), 0);
       if (total !== node.corp.shares) closeProblems.push(`${id}: holders own ${total.toLocaleString()} of ${node.corp.shares.toLocaleString()} shares`);
     } else {
-      const total = rows.reduce((sum, h) => sum + (h.fraction ?? 0), 0);
+      // A two-name holding of unknown form carries one row for all its names.
+      const total = rows.reduce((sum, h) => sum + (h.fraction ?? 0) * (h.formUnknown ? h.holders.length : 1), 0);
       if (Math.abs(total - 1) > EPS) closeProblems.push(`${id}: ownership adds to ${(total * 100).toFixed(2)}%, not 100%`);
     }
   }
@@ -157,6 +188,10 @@ export function verify(model) {
     } catch (error) { eventProblems.push(`${eventId}: ${error.message}`); }
   }
   for (const node of Object.values(nodes)) if (node.designation?.source?.status === "unknown") findings.push({ node: node.id, severity: "high", text: `${shortName(node)}: no beneficiary form in documents` });
+  for (const h of unknownForms) {
+    findings.push({ node: h.held, severity: "high", text: `${shortName(nodes[h.held] ?? { name: h.held })}: in ${h.holders.length} names, and the documents don't show how the title is held` });
+    open.push({ where: `${h.held}.form`, status: "unknown", note: `How ${shortName(nodes[h.held] ?? { name: h.held })} is titled is not in the documents` });
+  }
   for (const fact of open) if (fact.status === "assumed") findings.push({ node: fact.where.split(".")[0], severity: "high", text: `Assumed: ${fact.note}` });
 
   // 5b. Facts the law turns on: where the household lives, marital status, and every QSBS condition.
@@ -187,7 +222,7 @@ export function verify(model) {
 
   // 5c. Absence is said as absence: a note about a fact the documents don't show must say so.
   const absenceProblems = [];
-  const unknownNodes = new Set(Object.values(nodes).filter((n) => ["designation", "value", "tax", "will"].some((k) => n[k]?.source?.status === "unknown")).map((n) => n.id));
+  const unknownNodes = new Set([...Object.values(nodes).filter((n) => ["designation", "value", "tax", "will"].some((k) => n[k]?.source?.status === "unknown")).map((n) => n.id), ...unknownForms.map((h) => h.held)]);
   for (const view of model.views) for (const note of view.notes ?? []) {
     if (note.on && unknownNodes.has(note.on) && !/document|on file|paperwork|isn’t in|isn't in|nothing (here|shows)/i.test(`${note.title} ${note.body}`)) absenceProblems.push(`${view.id}: the note on ${note.on} states a missing fact without saying it is missing from the documents`);
     if (/\b(never|everything they own|all they own)\b/i.test(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`)) absenceProblems.push(`${view.id}: "${(`${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`.match(/\b(never|everything they own|all they own)\b/i) ?? [])[0]}" claims more than the documents can show`);
@@ -200,6 +235,43 @@ export function verify(model) {
     for (const m of head.matchAll(/\b(there is no will|no will for \w+|without a will|has no will|left no will)\b/gi)) {
       const after = head.slice(m.index + m[0].length, m.index + m[0].length + 48);
       if (!/in (the|these|your) documents|on file|we (have|were sent)|in what (we|you) (have|sent)|is in the documents/i.test(after)) absenceProblems.push(`${view.id} title: "${m[0]}" states as fact what the documents don't show; say "no will in the documents"`);
+    }
+  }
+  // Title is a fact about a deed or a statement. When the model carries an
+  // asset whose title form isn't shown, or one the trust's schedule lists but
+  // nothing retitles, a headline or zone label may not say "by title" or
+  // "still in your name" unless it names the evidence in the same breath.
+  const titleOpen = unknownForms.length > 0 || Object.values(nodes).some((n) => n.trustSchedule);
+  if (titleOpen) for (const view of model.views) {
+    const heads = [["title", `${view.title} ${view.subtitle ?? ""} ${view.kicker ?? ""}`], ...(view.zones ?? []).map((z) => [`zone "${z.label}"`, `${z.label} ${z.legend ?? ""}`])];
+    for (const [where, text] of heads) for (const m of text.matchAll(/\b(by title|still titled|still in (?:your|his|her|their|one|both|the same) names?)\b/gi)) {
+      const sentence = text.slice(Math.max(0, text.lastIndexOf(".", m.index) + 1), (text.indexOf(".", m.index) + 1) || text.length);
+      if (!/deed|statement|title report|tax roll|on file|documents? (show|says?|don’t show|don't show)|in the documents|papers show/i.test(sentence)) absenceProblems.push(`${view.id} ${where}: "${m[0]}" asserts how title is held; the documents don't show it, so say what they show instead`);
+    }
+  }
+  // A trust that ends survivorship for what it lists (cited) decides ahead
+  // of the deed's form; a note on a listed asset may not say the form decides.
+  for (const view of model.views) for (const note of view.notes ?? []) {
+    const node = note.on && nodes[note.on];
+    const trust = node?.trustSchedule && nodes[node.trustSchedule.trust];
+    if (!trust?.trust?.survivorship?.ends) continue;
+    const m = `${note.title} ${note.body}`.match(/\b(trust or no trust|by a form|the (deed|form|title) decides|whatever the trust says|regardless of the trust)\b/i);
+    if (m) absenceProblems.push(`${view.id}: the note on ${note.on} says "${m[0]}", but the trust's own text ends survivorship for what it lists (${citeLabel(model, trust.trust.survivorship.source)}); say what the trust says and name the attorney's question`);
+  }
+  // A page that mentions a disclaimer trust owes the one fact that makes it urgent.
+  for (const view of model.views) for (const note of view.notes ?? []) {
+    const text = `${note.title} ${note.body}`;
+    if (/disclaim/i.test(text) && !/nine months|9 months/i.test(text)) absenceProblems.push(`${view.id}: a note mentions a disclaimer without its deadline; say it: "${DISCLAIMER_RULE}"`);
+  }
+  // In a community-property state, intestacy isn't one answer: say both branches.
+  if (model.raw.jurisdiction?.communityProperty) for (const [eventId, event] of Object.entries(model.events)) {
+    if (event.kind !== "death") continue;
+    let rows = [];
+    try { rows = deathRoutes(model, eventId); } catch {}
+    for (const row of rows) {
+      if (!row.to.some((e) => e.to === "intestacy")) continue;
+      const notes = model.views.flatMap((v) => (v.notes ?? []).filter((n) => n.on === row.id).map((n) => `${n.title} ${n.body}`));
+      if (!notes.some((t) => /community/i.test(t) && /separate/i.test(t))) absenceProblems.push(`${row.id} would pass by intestacy in a community-property state; a note on it must say what happens if it is community property and if any part is separate`);
     }
   }
   check("absence said as absence", [...new Set(absenceProblems)]);
@@ -215,7 +287,9 @@ export function verify(model) {
         if (!/(^|[\s,])pp?\.\s*\d/.test(part)) continue;
         const name = part.split(",")[0].trim();
         if (!name || /^(pp?\.|Art\.|§|notes?\b)/.test(name)) continue;
-        if (!shorts.has(plain(name))) proseCiteProblems.push(`${where} cites "${name}, …" but no readable document is listed with the short name "${name}"`);
+        if (!shorts.has(plain(name))) { proseCiteProblems.push(`${where} cites "${name}, …" but no readable document is listed with the short name "${name}"`); continue; }
+        const docId = shorts.get(plain(name));
+        if (!pageOk(docId, part)) proseCiteProblems.push(`${where} cites "${part.trim()}", outside the pages its readNote says were read (${documents[docId].readNote})`);
       }
     }
   };

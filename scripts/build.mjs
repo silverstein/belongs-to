@@ -41,7 +41,9 @@ for (const view of model.views) {
   let rendered, stacked = null, legend = [];
   const receipt = [];
   const checkNamed = (name) => facts.checks.find((c) => c.name === name)?.passed;
-  if (checkNamed("every fact cited or marked")) receipt.push({ text: "Every number here points to one of your documents. Where we couldn’t find something, we said so." });
+  // The check behind this line covers dollar figures (5d) and cited facts; a
+  // date or a count in a note is not checked, so the line doesn't claim it.
+  if (checkNamed("every fact cited or marked")) receipt.push({ text: "Every dollar figure here points to one of your documents. Where we couldn’t find something, we said so." });
   const openHere = facts.open.filter((o) => o.status !== "illustrative");
   const openLetters = [...new Set(openHere.map((o) => notes.find((n) => n.on === o.where.split(".")[0])?.letter).filter(Boolean))].sort();
   if (openHere.length) receipt.push({ text: `${openHere.length === 1 ? "One thing" : `${openHere.length} things`} the documents don’t answer. We said so instead of guessing${openLetters.length ? ` (${openLetters.length === 1 ? "note" : "notes"} ${openLetters.join(", ")})` : ""}`, open: true });
@@ -57,6 +59,12 @@ for (const view of model.views) {
     const listed = deathRoutes(model, view.event).filter((r) => r.route === "declared");
     const trustDoc = listed.length ? model.documents[model.nodes[listed[0].to[0].to].source?.doc] : null;
     if (trustDoc && trustDoc.signed !== "signed" && !view.kicker) view.kicker = `The copy we have of the trust papers is ${trustDoc.signed === "unsigned" ? "unsigned" : "not shown as signed"}. If the signed set exists, the trust’s list most likely already covers what’s drawn under “On the trust’s list”; if it doesn’t, nothing is in the trust yet.`;
+  }
+  if (view.type === "structure") {
+    // The same caption on a structure view whose cards sit on an unsigned trust's list.
+    const listed = Object.values(model.nodes).filter((n) => n.trustSchedule && view.place?.[n.id]);
+    const trustDoc = listed.length ? model.documents[model.nodes[listed[0].trustSchedule.trust]?.source?.doc] : null;
+    if (trustDoc && trustDoc.signed !== "signed" && !view.kicker) view.kicker = `The copy we have of the trust papers is ${trustDoc.signed === "unsigned" ? "unsigned" : "not shown as signed"}. If the signed set exists, the trust’s list most likely already covers what it names; if it doesn’t, nothing is in the trust yet.`;
   }
   if (view.type === "structure") {
     rendered = renderStructure(model, view, { noteBadges });

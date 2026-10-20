@@ -306,7 +306,7 @@ ${CSS}</style>
   ${notes.length ? `<section class="bt-notes" aria-label="Notes">${notes.map((n) => `<div class="bt-note ${esc(n.tone)}" data-on="${esc(n.on ?? "")}"><h3><span class="bt-letter ${esc(n.tone)}">${esc(n.letter)}</span><span>${esc(n.title)}</span></h3><p>${esc(n.body)}</p></div>`).join("")}</section>` : ""}
   ${todos.length ? `<section class="bt-todo" aria-label="What to do"><h4>What to do</h4><ol>${todos.map((t) => `<li>${esc(t)}</li>`).join("")}</ol></section>` : ""}
   <footer class="bt-foot${missing.length ? " bt-has-missing" : ""}">
-    <div><h4>What we looked at</h4><ul class="bt-sources">${docs.map((d) => `<li><b>${esc(d.short)}</b>${esc(d.title)}${d.date && !d.title.includes(d.date.slice(0, 4)) ? `, ${esc(d.date.slice(0, 4))}` : ""}${d.read === "partial" ? ` <i>(${esc(d.readNote ?? "read in part")})</i>` : ""}</li>`).join("")}</ul></div>
+    <div><h4>What we looked at</h4><ul class="bt-sources">${docs.map((d) => `<li><b>${esc(d.short)}</b>${esc(d.title)}${d.date && !d.title.includes(d.date.slice(0, 4)) ? `, ${esc(d.date.slice(0, 4))}` : ""}${d.read === "partial" ? ` <i>(${esc(d.readNote ?? "read in part")})</i>` : ""}${d.signed === "unsigned" ? ` <i>(copy unsigned)</i>` : d.signed === "unknown" ? ` <i>(signature pages not in the copy)</i>` : ""}</li>`).join("")}</ul></div>
     ${missing.length ? `<div class="bt-missing"><h4>We looked for these and couldn’t find them</h4><ul class="bt-sources">${missing.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></div>` : ""}
     <div><h4>How we double-checked</h4><ul class="bt-receipt">${receipt.map((r) => `<li class="${r.open ? "open" : ""}">${esc(r.text)}</li>`).join("")}</ul></div>
     ${view.law ? `<p class="bt-law"><b>The rules behind this</b> ${esc(view.law)}</p>` : ""}

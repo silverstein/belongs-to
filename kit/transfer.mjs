@@ -20,6 +20,13 @@ export const BAND_TEXT = {
 };
 export const ORDER = ["contract", "agreement", "title", "trust", "declared", "probate", "unknown"];
 
+// What the intestacy card says under its name. In a community-property
+// state there are two answers, so the card says both instead of letting the
+// builder run one as the default.
+export const intestacyLine = (model) => model.raw.jurisdiction?.communityProperty
+  ? "If it’s community property, the spouse. Any separate part is split between the spouse and the children, the way the state’s rulebook says"
+  : "Usually the spouse and children, split the way the state’s rulebook says";
+
 export function renderTransfer(model, view, { noteBadges }) {
   const event = model.events[view.event];
   const who = model.nodes[event.who];
@@ -32,8 +39,21 @@ export function renderTransfer(model, view, { noteBadges }) {
   const recipX = stationX + stationW + gutter;
   const width = recipX + recipW + M;
   const headH = 52, bandHead = 40, rowH = 60, rowGap = 12, bandGap = 14, bandPadB = 14;
-  // The sentence under each item may need two lines; the row grows with it.
-  for (const row of all) { row.holdLines = wrap(holdLine(model, event, row), "detail", assetW - 52, 2); row.h = rowH + (row.holdLines.length - 1) * 16; }
+  // The sentence under each item may need two lines, and a name that can't
+  // sit beside its value wraps and pushes the value to its own line; the row
+  // grows with both. Nothing is ever cut to "AI…".
+  for (const row of all) {
+    const node = row.item;
+    const badgeW = (noteBadges.get(row.id) ?? []).length * 22;
+    row.valueText = row.value == null ? "Not in documents" : money(row.value);
+    const beside = assetW - 38 - 14 - measure(row.valueText, "value") - 12 - badgeW;
+    if (measure(node.name, "name") <= beside) { row.nameLines = [node.name]; row.valueOwn = false; }
+    else if (measure(shortName(node), "name") <= beside) { row.nameLines = [shortName(node)]; row.valueOwn = false; }
+    else { row.nameLines = wrap(node.name, "name", assetW - 52 - badgeW, 2); row.valueOwn = true; }
+    row.holdLines = wrap(holdLine(model, event, row), "detail", assetW - 52, 2);
+    row.textTop = (row.nameLines.length - 1) * 18 + (row.valueOwn ? 17 : 0);
+    row.h = rowH + row.textTop + (row.holdLines.length - 1) * 16;
+  }
 
   // Bands in mechanism order, rows inside them in authored order.
   const bands = [];
@@ -81,8 +101,8 @@ export function renderTransfer(model, view, { noteBadges }) {
       if (court.length) lines.push({ text: `${money(sum(court))} after court, minus fees`, tone: "flag", key: "court", amount: sum(court), suffix: " after court, minus fees" });
     }
     const survivors = (event.survivors ?? []).map((id) => shortName(model.nodes[id]));
-    const subtitle = recip.node.kind === "law" ? "Usually the spouse and children, split the way the state’s rulebook says" : recip.node.kind === "person" ? `It becomes ${shortName(recip.node)}’s` : recip.node.trust?.onDeath?.trusteeAfter === "survivor" ? `${survivors.join(" and ")} now runs it alone` : "";
-    const subtitleLines = subtitle ? wrap(subtitle, "detail", recipW - 32, 2) : [];
+    const subtitle = recip.node.kind === "law" ? intestacyLine(model) : recip.node.kind === "person" ? `It becomes ${shortName(recip.node)}’s` : recip.node.trust?.onDeath?.trusteeAfter === "survivor" ? `${survivors.join(" and ")} now runs it alone` : "";
+    const subtitleLines = subtitle ? wrap(subtitle, "detail", recipW - 32, 3) : [];
     const h = 58 + subtitleLines.length * 18 + lines.reduce((sum, l) => sum + (l.tone === "sub" ? 17 : 22), 0) + 16;
     const mid = ys.length ? (Math.min(...ys) + Math.max(...ys)) / 2 : cursor + h / 2;
     let top = Math.max(cursor, mid - h / 2);
@@ -148,14 +168,12 @@ export function renderTransfer(model, view, { noteBadges }) {
     out.push(`<g class="bt-node" data-id="${esc(row.id)}" tabindex="0" role="group" aria-label="${esc(node.name)}">`);
     out.push(`<rect class="bt-card bt-asset${court ? " bt-t-flag" : ""}" x="${M}" y="${y}" width="${assetW}" height="${row.h}" rx="10"/>`);
     out.push(icon(iconFor(node), M + 14, y + 12, 15, "bt-icon"));
-    const valueText = row.value == null ? "Not in documents" : money(row.value);
-    const valueW = measure(valueText, "value");
+    const valueText = row.valueText;
     const badgeW = badges.length * 22;
-    const nameMax = assetW - 38 - 14 - valueW - 12 - badgeW;
-    const name = measure(node.name, "name") <= nameMax ? node.name : shortName(node);
-    out.push(`<text class="bt-name" x="${M + 38}" y="${y + 25}">${esc(wrap(name, "name", nameMax, 1)[0])}</text>`);
-    row.holdLines.forEach((line, k) => out.push(`<text class="bt-detail${court ? " bt-tone-flag" : ""}" x="${M + 38}" y="${y + 44 + k * 16}">${esc(line)}</text>`));
-    out.push(`<text class="bt-value${row.value == null ? " bt-tone-ask" : ""}" x="${M + assetW - 14 - badgeW}" y="${y + 25}" text-anchor="end">${esc(valueText)}</text>`);
+    row.nameLines.forEach((line, k) => out.push(`<text class="bt-name" x="${M + 38}" y="${y + 25 + k * 18}">${esc(line)}</text>`));
+    row.holdLines.forEach((line, k) => out.push(`<text class="bt-detail${court ? " bt-tone-flag" : ""}" x="${M + 38}" y="${y + 44 + row.textTop + k * 16}">${esc(line)}</text>`));
+    const valueY = row.valueOwn ? y + 25 + (row.nameLines.length - 1) * 18 + 17 : y + 25;
+    out.push(`<text class="bt-value${row.value == null ? " bt-tone-ask" : ""}" x="${M + assetW - 14 - badgeW}" y="${valueY}" text-anchor="end">${esc(valueText)}</text>`);
     badges.forEach((badge, k) => { const cx = M + assetW - 16 - k * 22, cy = y + 20; out.push(`<g class="bt-badge bt-tone-${badge.tone}"><circle cx="${cx}" cy="${cy}" r="9.5"/><text x="${cx}" y="${cy + 3.8}" text-anchor="middle">${badge.letter}</text></g>`); });
     out.push(`</g>`);
     boxes.push({ id: row.id, x: M, y, w: assetW, h: row.h });

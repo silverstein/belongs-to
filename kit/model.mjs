@@ -26,7 +26,11 @@ export function normalize(raw) {
     if (holding.shares != null && held?.corp?.shares) fraction = holding.shares / held.corp.shares;
     else if (holding.share != null) fraction = holding.share;
     else if (holding.form === "joint-survivorship") fraction = 1;
-    return { ...holding, index, holders, fraction, joint: holding.form === "joint-survivorship" };
+    // Two names on a closing statement or a tax roll is evidence of names,
+    // not of how title is held. The working split is equal shares, drawn as
+    // such; the form itself is a gap the page says out loud.
+    else if (holding.form === "unknown") fraction = 1 / Math.max(1, holders.length);
+    return { ...holding, index, holders, fraction, joint: holding.form === "joint-survivorship", formUnknown: holding.form === "unknown" };
   });
   return { raw, nodes, holdings, documents: raw.documents ?? {}, events: raw.events ?? {}, views: raw.views ?? [] };
 }

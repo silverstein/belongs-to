@@ -15,13 +15,17 @@ const RADIUS = 7;
 
 const TONES = { flag: "flag", ask: "ask", info: "info" };
 
-export function kindLabel(node) {
+export function kindLabel(node, model = null) {
   switch (node.kind) {
     case "person": return "";
     case "trust": return `${node.trust?.revocable ? "Revocable" : "Irrevocable"} trust${node.since ? ` · ${node.since}` : ""}`;
     case "llc": return `LLC${node.since ? ` · ${node.since}` : ""}`;
     case "corp": return `${node.corp?.type ? `${node.corp.type} corporation` : "Corporation"}${node.since ? ` · ${node.since}` : ""}`;
-    case "group": return "Other shareholders";
+    case "group": {
+      // "Shareholders" of a corporation, "members" of an LLC, else owners.
+      const kinds = new Set(model ? holdingsBy(model, node.id).map((h) => model.nodes[h.held]?.kind) : []);
+      return kinds.has("corp") && !kinds.has("llc") ? "Other shareholders" : kinds.has("llc") && !kinds.has("corp") ? "Other members" : "Other owners";
+    }
     case "home": return "Home";
     case "rental": return "Rental property";
     case "brokerage": return "Brokerage account";
@@ -40,7 +44,10 @@ function nameList(model, entries) {
 
 export function cardFacts(model, node) {
   const details = [];
-  if (node.detail) details.push({ text: node.detail });
+  // A plain string is a label (an address, a custodian); a fact goes in
+  // { text, source } and is cited under the card like every other fact.
+  if (node.detail) details.push({ text: typeof node.detail === "string" ? node.detail : node.detail.text });
+  for (const claim of node.claims ?? []) details.push({ text: `Claim on it: ${claim.text}` });
   if (node.kind === "person" && node.role) details.push({ text: node.role });
   if (node.trust?.trustees?.length) details.push({ text: `Trustees: ${nameList(model, node.trust.trustees)}` });
   if (node.trust?.beneficiaryText) details.push({ text: node.trust.beneficiaryText });
@@ -49,6 +56,9 @@ export function cardFacts(model, node) {
   if (node.corp?.shares) details.push({ text: `${(node.corp.shares / 1e6).toFixed(0)}M shares outstanding` });
   const joint = holdingsOf(model, node.id).find((h) => h.joint);
   if (joint) details.push({ text: `Joint, with right of survivorship` });
+  const unknownForm = holdingsOf(model, node.id).find((h) => h.formUnknown);
+  if (unknownForm) details.push({ text: `In ${unknownForm.holders.length === 2 ? "both" : unknownForm.holders.length} names; how it’s held isn’t in the documents`, tone: "ask" });
+  if (node.trustSchedule) details.push({ text: "On the trust’s list; nothing here shows it retitled", tone: "ask" });
   if (node.designation) {
     if (node.designation.source?.status === "unknown") details.push({ text: "Beneficiary: not in documents", tone: "ask" });
     else if (!(node.designation.primary ?? []).length) details.push({ text: "Beneficiary: none named", tone: "flag" });
@@ -72,17 +82,27 @@ export function cardFacts(model, node) {
   const cites = [];
   if (node.kind !== "person") {
     if (incoming.length === 1) cites.push({ label: "Held", source: incoming[0].source });
-    else if (node.source) cites.push({ label: "Formed", source: node.source });
+    else if (node.source) {
+      // "Formed" only when the cited paper is the formation document; an
+      // amendment or a later filing shows the party exists, not its forming.
+      const doc = model.documents[node.source.doc];
+      const forming = /formation|articles|certificate|charter|incorporat|organization|declaration|trust agreement/i.test(`${doc?.kind ?? ""} ${doc?.title ?? ""}`);
+      cites.push({ label: forming ? "Formed" : "Papers", source: node.source });
+    }
+    if (node.trustSchedule?.source) cites.push({ label: "Listed", source: node.trustSchedule.source });
+    if (node.detail && typeof node.detail === "object") cites.push({ label: node.detail.label ?? "Detail", source: node.detail.source });
+    for (const claim of node.claims ?? []) cites.push({ label: "Claim", source: claim.source });
     if (node.tax?.source) cites.push({ label: "Tax", source: node.tax.source });
     if (node.corp?.taxSource) cites.push({ label: "Tax", source: node.corp.taxSource });
     if (node.designation?.source && node.designation.source.doc) cites.push({ label: "Form", source: node.designation.source });
-  }
+  } else if (node.trustSchedule?.source) cites.push({ label: "Listed", source: node.trustSchedule.source });
   const cite = cites.map((c) => `${c.label}: ${citeLabel(model, c.source)}`).filter((t) => !t.endsWith(": "));
   return { kind: kindLabel(node), details, value, cite };
 }
 
 export function layoutCard(model, node, width, badges) {
   const facts = cardFacts(model, node);
+  facts.kind = kindLabel(node, model);
   const inner = width - PAD * 2;
   if (node.kind === "person") {
     const nameLines = wrap(node.name, "name", width - 64 - PAD, 2);
@@ -105,7 +125,7 @@ export function layoutCard(model, node, width, badges) {
     else if (measure(text, "value") + 6 + measure(basis, "detail") <= inner) valueLines = [{ text, basis, tone }];
     else valueLines = [{ text, tone }, { text: "", basis, tone }];
   }
-  const citeLines = facts.cite.flatMap((c) => wrap(c, "cite", inner, 2));
+  const citeLines = facts.cite.flatMap((c) => wrap(c, "cite", inner, 3));
   let height = PAD + (kindText ? LH.kind + 6 : 0) + nameLines.length * LH[nameStyle] + 2;
   if (detailLines.length) height += 4 + detailLines.length * LH.detail;
   if (valueLines.length) height += 6 + valueLines.reduce((sum, line) => sum + (line.text ? LH.value : LH.detail), 0);
@@ -213,9 +233,10 @@ export function renderStructure(model, view, { noteBadges }) {
       if (!place[holder]) continue;
       let label;
       if (h.joint) label = "Joint";
+      else if (h.formUnknown) label = h.holders.length === 2 ? "Both names" : `${h.holders.length} names`;
       else if (h.shares != null) label = `${fmtShares(h.shares)} · ${pct(h.fraction)}`;
       else label = pct(h.fraction);
-      edges.push({ from: holder, to: h.held, label, style: "own", joint: h.joint });
+      edges.push({ from: holder, to: h.held, label, style: "own", joint: h.joint || h.formUnknown });
     }
   }
   const relCount = (label) => (view.relations ?? []).filter((r) => r.label === label).length;
@@ -324,6 +345,10 @@ export function renderStructure(model, view, { noteBadges }) {
   const segments = [];
   const labels = [];
   const paths = [];
+  // A child with two incoming lines has two ports 18px apart, too close for
+  // two share labels. The label of a parent's edge into such a child moves
+  // under the parent instead (one per parent), where nothing else sits.
+  const belowUsed = new Set();
   for (const [gap, { order }] of lanesByGap) {
     const gapTop = rowTop.get(gap) + rowHeight.get(gap);
     order.forEach((tree, i) => { tree.laneY = gapTop + LABEL_ZONE + 6 + laneShift(gap) + i * LANE_STEP; });
@@ -339,7 +364,11 @@ export function renderStructure(model, view, { noteBadges }) {
         const pts = tree.flat ? [[px, py], [cx, cy]] : [[px, py], [px, laneY], [cx, laneY], [cx, cy]];
         paths.push({ d: roundedPath(pts), cls: `${cls}${edge.style === "rel" ? " bt-edge-rel" : ""}`, end: [cx, cy], from: edge.from, to: edge.to });
         for (let k = 0; k < pts.length - 1; k++) segments.push({ a: pts[k], b: pts[k + 1], from: edge.from, to: edge.to });
-        if (edge.label && !(edge.joint && tree.edges.indexOf(edge) !== i)) labels.push({ text: edge.label, x: cx, y: cy - 13, edge, rel: edge.style === "rel" });
+        if (edge.label && !(edge.joint && tree.edges.indexOf(edge) !== i)) {
+          const crowded = (portsByChild.get(edge.to)?.length ?? 1) > 1 && tree.edges.length > 1 && !tree.flat && !belowUsed.has(tree.parent) && edge.style === "own";
+          if (crowded) { belowUsed.add(tree.parent); labels.push({ text: edge.label, x: px, y: py + 13, edge, below: tree.parent }); }
+          else labels.push({ text: edge.label, x: cx, y: cy - 13, edge, rel: edge.style === "rel" });
+        }
       });
     } else {
       const cx = tree.downs[0], cy = topOf(tree.child);

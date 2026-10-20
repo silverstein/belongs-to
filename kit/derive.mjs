@@ -18,6 +18,10 @@ export const ROUTES = {
 
 const alive = (id, event) => id !== event.who;
 
+// The sentence a page owes whenever it mentions a disclaimer trust. The
+// deadline is law, not a document fact, and it is what makes the choice urgent.
+export const DISCLAIMER_RULE = "A disclaimer has to be made in writing within nine months of the death, and before the survivor takes any benefit from what is disclaimed; an attorney confirms the deadline and the form.";
+
 // Living beneficiaries of the first tier that has any, with their shares
 // rescaled pro rata. Per stirpes designations are not modeled: refuse.
 function pickBeneficiaries(designation, event) {
@@ -46,7 +50,11 @@ export function deathRoutes(model, eventId) {
     const whole = valueOf(model, item.id);
     // What moves is the decedent's interest: the whole of a survivorship
     // account (the survivor then holds all of it), else the decedent's share.
-    const value = whole == null ? null : holding.joint ? whole : whole * (holding.fraction ?? 1);
+    // Where a cited trust term ends survivorship, a joint holding moves the
+    // decedent's equal part; see `override` below.
+    const survivorshipEnds = Boolean(item.trustSchedule && model.nodes[item.trustSchedule.trust]?.trust?.survivorship?.ends && model.nodes[item.trustSchedule.trust].trust.grantors?.includes(event.who));
+    const part = holding.joint ? (survivorshipEnds ? 1 / holding.holders.length : 1) : holding.fraction ?? 1;
+    const value = whole == null ? null : whole * part;
     const facts = [holding.source];
     let route, to, detail;
     const others = holding.holders.filter((id) => id !== event.who);
@@ -58,8 +66,18 @@ export function deathRoutes(model, eventId) {
     // probate. The page draws that as its own band and says what it rests on.
     const schedule = item.trustSchedule && model.nodes[item.trustSchedule.trust];
     const declared = schedule?.kind === "trust" && schedule.trust?.revocable && schedule.trust.grantors?.includes(event.who) ? schedule : null;
-    const declare = () => { facts.push(item.trustSchedule.source); route = "declared"; to = [{ to: declared.id, share: 1 }]; detail = "On the trust’s list. Likely the trust’s after one court step."; };
-    if (holding.joint && others.some((id) => alive(id, event))) {
+    // Some trusts say in their own text that survivorship ends for anything
+    // they list (a community-property declaration does this). With that term
+    // cited, the trust's list runs ahead of the title's form, and the share
+    // that moves is the decedent's part, not the whole.
+    const override = Boolean(declared?.trust?.survivorship?.ends);
+    const declare = () => {
+      facts.push(item.trustSchedule.source);
+      route = "declared"; to = [{ to: declared.id, share: 1 }];
+      if (override && (holding.joint || holding.formUnknown)) { facts.push(declared.trust.survivorship.source); detail = "On the trust’s list, and the trust says survivorship ends for what it lists. Likely the trust’s after one court step."; }
+      else detail = "On the trust’s list. Likely the trust’s after one court step.";
+    };
+    if (holding.joint && others.some((id) => alive(id, event)) && !override) {
       route = "title";
       const living = others.filter((id) => alive(id, event));
       to = living.map((id) => ({ to: id, share: 1 / living.length }));
@@ -94,6 +112,12 @@ export function deathRoutes(model, eventId) {
       route = "agreement";
       to = [{ to: item.llc.successor, share: 1 }];
       detail = "Agreement names a successor";
+    }
+    if (!route && holding.formUnknown && !(declared && override)) {
+      // Names on a document, form not shown: survivorship may or may not
+      // apply, and the trust's list can't settle it without the term above.
+      route = "unknown"; to = []; detail = declared ? "On the trust’s list, but the documents don’t show how the title is held" : "The documents don’t show how the title is held";
+      if (declared) facts.push(item.trustSchedule.source);
     }
     if (!route && declared) declare();
     if (!route && item.llc && item.llc.source?.status === "unknown") {
@@ -283,7 +307,12 @@ export function holdLine(model, event, row) {
   const node = row.item;
   if (row.ownedBy) return `Owned by ${row.ownedBy.map((id) => shortName(model.nodes[id])).join(" and ")}`;
   if (row.via) return `In ${inSentence(shortName(model.nodes[row.via]))}`;
-  if (row.holding?.joint) return `Joint with ${row.holding.holders.filter((h) => h !== event.who).map((h) => shortName(model.nodes[h])).join(", ")}`;
+  const others = (row.holding?.holders ?? []).filter((h) => h !== event.who).map((h) => shortName(model.nodes[h]));
+  if (row.holding?.joint) return row.route === "declared" ? `Joint with ${others.join(", ")}, and the trust’s list names it` : `Joint with ${others.join(", ")}`;
+  if (row.holding?.formUnknown) {
+    const names = `${shortName(who)}’s and ${others.join(", ")}’s`;
+    return row.route === "declared" ? `${names}, and the trust’s list names it` : `${names}; how it’s held isn’t in the documents`;
+  }
   const fraction = row.holding?.fraction ?? 1;
   const part = fraction >= 1 ? null : fraction === 0.5 ? "half" : fraction === 1 / 3 ? "third" : fraction === 0.25 ? "quarter" : `${Math.round(fraction * 100)}% share`;
   const mine = part ? `${shortName(who)}’s ${part}` : `${shortName(who)}’s`;
