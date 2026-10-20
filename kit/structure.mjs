@@ -365,7 +365,7 @@ export function renderStructure(model, view, { noteBadges }) {
         paths.push({ d: roundedPath(pts), cls: `${cls}${edge.style === "rel" ? " bt-edge-rel" : ""}`, end: [cx, cy], from: edge.from, to: edge.to });
         for (let k = 0; k < pts.length - 1; k++) segments.push({ a: pts[k], b: pts[k + 1], from: edge.from, to: edge.to });
         if (edge.label && !(edge.joint && tree.edges.indexOf(edge) !== i)) {
-          const crowded = (portsByChild.get(edge.to)?.length ?? 1) > 1 && tree.edges.length > 1 && !tree.flat && !belowUsed.has(tree.parent) && edge.style === "own";
+          const crowded = (portsByChild.get(edge.to)?.length ?? 1) > 1 && tree.edges.length > 1 && !tree.flat && !belowUsed.has(tree.parent) && edge.style === "own" && !edge.joint;
           if (crowded) { belowUsed.add(tree.parent); labels.push({ text: edge.label, x: px, y: py + 13, edge, below: tree.parent }); }
           else labels.push({ text: edge.label, x: cx, y: cy - 13, edge, rel: edge.style === "rel" });
         }

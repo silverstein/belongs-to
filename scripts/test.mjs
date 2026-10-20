@@ -545,7 +545,7 @@ test("a trust that ends survivorship for what it lists runs ahead of joint title
   const row = deathRoutes(m, "sam-dies").find((r) => r.id === "home");
   if (row.route !== "declared" || row.to[0].to !== "trust") throw new Error(`with the term: ${row.route}`);
   if (Math.abs(row.value - m.nodes.home.value.usd / 2) > 1) throw new Error(`moved ${row.value}, want half`);
-  if (!/survivorship ends/.test(row.detail)) throw new Error(row.detail);
+  if (!/ends survivorship/.test(row.detail)) throw new Error(row.detail);
   const text = rowText(renderTransfer(m, raw.views[1], { noteBadges: new Map() }).svg, "home");
   if (!/Joint with Dana, and the trust’s list names it/.test(text)) throw new Error(text.slice(0, 160));
   delete raw.parties.trust.trust.survivorship.source;

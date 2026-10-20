@@ -19,7 +19,7 @@ export function renderTransferStacked(model, view, { noteBadges }) {
 
   const W = 420, M = 14, cardW = 282, gutterX = M + cardW + 14; // lanes live from gutterX to W - M - 6
   const bandHead = 46, baseRowH = 84, rowGap = 10, bandGap = 12, bandPadB = 12;
-  const stationLinesOf = (row) => wrap(ROUTES[row.route].court ? `Court first. ${row.detail}` : row.detail, "laneSub", cardW - 54, 2);
+  const stationLinesOf = (row) => wrap(ROUTES[row.route].court ? `Court first. ${row.detail}` : row.detail, "laneSub", cardW - 54, 3);
   const fixLinesOf = (row) => (view.fixes?.[row.id] ? wrap(view.fixes[row.id], "laneSub", cardW - 40, 3) : []);
   const holdLinesOf = (row) => wrap(holdLine(model, event, row), "detail", cardW - 42, 2);
   const rowHOf = (row) => baseRowH + (stationLinesOf(row).length - 1) * 13 + (holdLinesOf(row).length - 1) * 13;

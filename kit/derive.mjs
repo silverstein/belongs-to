@@ -74,7 +74,7 @@ export function deathRoutes(model, eventId) {
     const declare = () => {
       facts.push(item.trustSchedule.source);
       route = "declared"; to = [{ to: declared.id, share: 1 }];
-      if (override && (holding.joint || holding.formUnknown)) { facts.push(declared.trust.survivorship.source); detail = "On the trust’s list, and the trust says survivorship ends for what it lists. Likely the trust’s after one court step."; }
+      if (override && (holding.joint || holding.formUnknown)) { facts.push(declared.trust.survivorship.source); detail = "On the trust’s list, which ends survivorship. Likely the trust’s after one court step."; }
       else detail = "On the trust’s list. Likely the trust’s after one court step.";
     };
     if (holding.joint && others.some((id) => alive(id, event)) && !override) {

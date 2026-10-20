@@ -178,7 +178,7 @@ export function renderTransfer(model, view, { noteBadges }) {
     out.push(`</g>`);
     boxes.push({ id: row.id, x: M, y, w: assetW, h: row.h });
 
-    const lines = wrap(row.detail, "detail", stationW - (court ? 46 : 28), 2);
+    const lines = wrap(row.detail, "detail", stationW - (court ? 46 : 28), 3);
     const sh = court ? row.h : Math.max(34, 14 + lines.length * 16);
     const sy = y + row.h / 2 - sh / 2;
     out.push(`<g class="bt-station${court ? " bt-station-court" : ""}" data-station="${esc(row.id)}"><rect x="${stationX}" y="${sy}" width="${stationW}" height="${sh}" rx="${court ? 9 : sh / 2}"/>`);
