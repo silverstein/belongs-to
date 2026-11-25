@@ -25,16 +25,32 @@ export default defineAgent({
     const model = fixtures[family][variant];
     const input = lastUserMessage ?? messages.map((message) => message.text).join("\n");
     const inventedBeneficiary = input.includes("Try the invented Roth beneficiary first.");
-    const overlappingCards = input.includes("Try the Park draft with overlapping cards first.");
+    const layoutRepairs = input.includes("Try two Park layout errors, then adjust the checked layout.");
+    const changedFacts = input.includes("Add the documented vehicle trim after the first Park packet.");
     const reviews = toolResults.filter((row) => row.name === "finish_review");
     const result = reviews.at(-1);
     if (result) {
       const output = result.output as { waitingForDocuments?: boolean; errors?: string[] };
       if (output?.errors) {
-        if ((inventedBeneficiary || overlappingCards) && reviews.length === 1) {
+        if (layoutRepairs && reviews.length === 1) {
+          const draft = structuredClone(model);
+          draft.views[1].bands = draft.views[1].bands.filter((band: string) => band !== "probate");
+          return tool("finish_review", { modelJson: JSON.stringify(draft) });
+        }
+        if ((inventedBeneficiary && reviews.length === 1) || (layoutRepairs && reviews.length === 2)) {
           return tool("finish_review", { modelJson: JSON.stringify(model) });
         }
         return `The example could not be checked. ${output.errors.join(" ")}`;
+      }
+      if (!output?.waitingForDocuments && layoutRepairs && reviews.length === 3) {
+        const draft = structuredClone(model);
+        for (const place of Object.values(draft.views[0].place) as number[][]) place[0] += 1;
+        return tool("finish_review", { modelJson: JSON.stringify(draft) });
+      }
+      if (!output?.waitingForDocuments && changedFacts && reviews.length === 1) {
+        const draft = structuredClone(model);
+        draft.assets.car.name = "2022 Subaru Outback Limited";
+        return tool("finish_review", { modelJson: JSON.stringify(draft) });
       }
       return output?.waitingForDocuments ? "Start again with the complete folder." : "The pages are ready. Start with the gap in the paperwork.";
     }
@@ -43,7 +59,7 @@ export default defineAgent({
       draft.assets.roth.designation = { primary: [{ to: "mia", share: 1 }], source: { status: "assumed" } };
       return tool("finish_review", { modelJson: JSON.stringify(draft) });
     }
-    if (overlappingCards) {
+    if (layoutRepairs) {
       const draft = structuredClone(model);
       const place = draft.views[0].place;
       place.k401 = place.roth;

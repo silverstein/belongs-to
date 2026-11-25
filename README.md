@@ -96,7 +96,9 @@ Run all three households once the preflight passes.
 npm run eval -- --url http://127.0.0.1:2000 --exclude-tag fixture --max-concurrency 1
 ```
 
-Each eve eval sends one folder, answers each review confirmation, and inspects the returned files. It checks the model with the kit and verifies page references and a set of known facts against the fictional papers. The kit's layout audit also has to pass before any file leaves the sandbox. Page numbers and the checked examples can catch real errors. A reader with the source in hand still checks whether every statement follows from its cited page.
+Each eve eval sends one folder, answers each review confirmation, and inspects the returned files. It checks the model with the kit and verifies page references and a set of known facts against the fictional papers. The facts and layout audits must pass before the family is asked. Pages are drawn after confirmation. Layout edits can reuse the last answer while the facts and gaps stay the same. A reader with the source in hand still checks whether every statement follows from its cited page.
+
+Set `BELONGS_TO_PACKET_DIR` to an absolute directory when running the eval to save its downloadable files under the session and review call IDs. To recover files from a saved Eve case, run `node scripts/export-packet.mjs <eval-case.json> <output-directory>` from `eve/`. The saved HTML includes its fonts and opens offline.
 
 To check the same sandbox, question and downloads without a model provider, create the separate fixture target. It supplies fixed model drafts so the test can isolate the rest of the flow.
 
@@ -107,7 +109,7 @@ node scripts/fixture-target.mjs
 (cd .eve-fixture && EVE_DEV=1 ../node_modules/.bin/eve start --host 127.0.0.1 --port 4289)
 ```
 
-With the fixture server running, use `npm run eval -- --url http://127.0.0.1:4289 --max-concurrency 1` from `eve/` in another terminal. This includes a regression that tries to name a Roth beneficiary without a source page. The live eval above measures whether the model can extract the facts from the source pages. From the repository root, run `eve/node_modules/.bin/tsc -p eve` for the type check.
+With the fixture server running, use `npm run eval -- --url http://127.0.0.1:4289 --max-concurrency 1` from `eve/` in another terminal. The fixtures cover an uncited Roth beneficiary, two layout repairs before one question, and a new confirmation after a fact changes. The live eval above measures whether the model can extract the facts from the source pages. From the repository root, run `eve/node_modules/.bin/tsc -p eve` for the type check.
 
 ## Export and share
 

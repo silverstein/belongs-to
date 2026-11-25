@@ -1,12 +1,22 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { fontFaceCss } from "../../kit/fonts.mjs";
 import { esc } from "../../kit/text.mjs";
 import { readFolder } from "./intake.mjs";
-import { inspectReview } from "./review.mjs";
+import { inspectReview, reviewConfirmationKey } from "./review.mjs";
+
+const confirmationPath = join("reviews", "confirmation.json");
+
+function readConfirmation() {
+  try {
+    return JSON.parse(readFileSync(confirmationPath, "utf8"));
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
 
 function pack(name, html, checkScript = false) {
   const script = checkScript ? html.match(/<script>([\s\S]*?)<\/script>\s*<\/body>\s*<\/html>\s*$/)?.[1] : undefined;
@@ -24,16 +34,41 @@ function pack(name, html, checkScript = false) {
 }
 
 try {
-  const [key, action] = process.argv.slice(2);
-  if (!/^[a-f0-9]{32}$/.test(key) || !["inspect", "render"].includes(action)) throw Error("Invalid review.");
+  const [key, action, expectedKey, answer] = process.argv.slice(2);
+  if (!/^[a-f0-9]{32}$/.test(key) || !["inspect", "render"].includes(action)
+      || (action === "render" && !/^[a-f0-9]{64}$/.test(expectedKey))
+      || (answer !== undefined && !["show", "more"].includes(answer))) throw Error("Invalid review.");
   const path = join("reviews", key);
   const modelPath = join(path, "household.json");
   const model = JSON.parse(readFileSync(modelPath, "utf8"));
   const inspected = inspectReview(model, readFolder(".eve/attachments"));
 
-  if (action === "inspect" || inspected.errors.length) {
-    console.log(JSON.stringify(inspected));
+  if (inspected.errors.length) {
+    console.log(JSON.stringify({ errors: inspected.errors }));
+    process.exit(0);
+  }
+  const confirmationKey = reviewConfirmationKey(model, inspected.gapList);
+  const prior = readConfirmation();
+  if (action === "inspect") {
+    execFileSync(process.execPath, ["scripts/build.mjs", modelPath, "--audit-only"], { encoding: "utf8", timeout: 15000 });
+    console.log(JSON.stringify({
+      gapList: inspected.gapList,
+      confirmationKey,
+      priorAnswer: prior?.key === confirmationKey ? prior.answer : undefined,
+    }));
   } else {
+    if (expectedKey !== confirmationKey) throw Error("The facts changed during review. Check the draft again.");
+    if (answer !== undefined) {
+      const temp = join(path, "confirmation.json");
+      writeFileSync(temp, JSON.stringify({ key: confirmationKey, answer }));
+      renameSync(temp, confirmationPath);
+    }
+    const decision = answer ?? (prior?.key === confirmationKey ? prior.answer : undefined);
+    if (decision === "more") {
+      console.log(JSON.stringify({ waitingForDocuments: true }));
+      process.exit(0);
+    }
+    if (decision !== "show") throw Error("The family must confirm this draft before the pages can be drawn.");
     const out = join(path, "out");
     execFileSync(process.execPath, ["scripts/build.mjs", modelPath, "--out", out, "--eve"], { encoding: "utf8", timeout: 15000 });
     const files = model.views.map(({ id }) => pack(`${id}.html`, readFileSync(join(out, `${id}.html`), "utf8"), true));

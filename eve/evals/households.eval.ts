@@ -23,8 +23,12 @@ const regressions = {
     request: "Try the invented Roth beneficiary first.",
   },
   layout: {
-    description: "Answer the renewed Park review after a layout error",
-    request: "Try the Park draft with overlapping cards first.",
+    description: "Repair two Park layouts before asking, then reuse the answer for a layout edit",
+    request: "Try two Park layout errors, then adjust the checked layout.",
+  },
+  facts: {
+    description: "Ask again when the checked facts change",
+    request: "Add the documented vehicle trim after the first Park packet.",
   },
 };
 
@@ -32,6 +36,7 @@ const scenarios = [
   ...Object.keys(cases).map((name) => ({ name: name as keyof typeof cases, regression: undefined })),
   { name: "park" as const, regression: "beneficiary" as const },
   { name: "park" as const, regression: "layout" as const },
+  { name: "park" as const, regression: "facts" as const },
 ];
 
 const localModule = (path: string) => pathToFileURL(resolve(process.cwd(), path)).href;
@@ -114,6 +119,10 @@ export default scenarios.map(({ name, regression }) => defineEval({
           error.includes("Cite the beneficiary page for roth"))), equals(true))
           .label("The invented Roth beneficiary was refused before the corrected draft asked for an answer");
       }
+      if (regression === "layout") {
+        t.check(completedReviews.filter((row) => (row.output as ReviewResult | undefined)?.errors?.some((error) =>
+          error.includes("layout audit FAILED"))).length, equals(2)).label("Two layout failures were returned before the first question");
+      }
 
       const submitted = new Set<string>();
       let answered = turn;
@@ -131,10 +140,14 @@ export default scenarios.map(({ name, regression }) => defineEval({
       }
 
       if (regression === "layout") {
-        const reviews = calls(answered.view, { name: "finish_review" });
-        t.check(reviews.some((row) => (row.output as ReviewResult | undefined)?.errors?.some((error) =>
-          error.includes("layout audit FAILED"))), equals(true)).label("The first confirmed draft failed the layout audit");
-        t.check(submitted.size, equals(2)).label("The corrected draft received its own confirmation");
+        t.check(session.events.filter((event) => event.type === "interaction.opened").length, equals(1))
+          .label("The family saw exactly one question");
+        t.check(calls(answered.view, { name: "finish_review" }).filter((row) =>
+          Boolean((row.output as Files | undefined)?.files?.length)).length, equals(2))
+          .label("The checked layout and its layout-only revision both rendered");
+      }
+      if (regression === "facts") {
+        t.check(submitted.size, equals(2)).label("The changed facts required a new confirmation");
       }
       answered.succeeded();
       t.calledSkill("belongs-to");
@@ -143,8 +156,17 @@ export default scenarios.map(({ name, regression }) => defineEval({
       t.check(Boolean(guides?.model?.startsWith("# The household model") && guides.design?.startsWith("# Design rules")
         && !guides.model.includes("examples/")), equals(true)).label("The model and layout guides are available without sample paths");
 
-      const packet = answered.toolCalls.filter((call) => call.name === "finish_review" && call.status === "completed")
-        .map((call) => call.output as Files | undefined).find((output) => output?.files?.length);
+      const reviews = calls(answered.view, { name: "finish_review" }).filter((call) => call.outcome === "completed");
+      const packets = reviews.filter((call) => (call.output as Files | undefined)?.files?.length);
+      const packet = packets.at(-1)?.output as Files | undefined;
+      if (regression === "facts") {
+        t.check(packets.length, equals(2)).label("Each confirmed version produced a packet");
+      }
+      if (process.env.BELONGS_TO_PACKET_DIR) {
+        const { saveReviewPackets }: typeof import("../scripts/export-packet.mjs") =
+          await import(localModule("scripts/export-packet.mjs"));
+        saveReviewPackets(reviews, resolve(process.env.BELONGS_TO_PACKET_DIR, session.id));
+      }
       const expected = ["at-a-death.html", "household.json", "what-to-do.html", "whose-name.html"];
       if (cases[name].sale) expected.push("qsbs.html");
       t.check(packet?.files?.map((file) => file.name).sort() ?? [], equals(expected.sort())).label("The checked packet has all expected files");

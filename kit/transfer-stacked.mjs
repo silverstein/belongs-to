@@ -10,7 +10,7 @@ import { BAND_TEXT, ORDER, intestacyLine } from "./transfer.mjs";
 import { measure, wrap, esc, money, inSentence } from "./text.mjs";
 import { icon, iconFor } from "./icons.mjs";
 
-export function renderTransferStacked(model, view, { noteBadges }) {
+export function renderTransferStacked(model, view, { noteBadges, geometryOnly = false }) {
   const event = model.events[view.event];
   const who = model.nodes[event.who];
   const all = deathRoutes(model, view.event);
@@ -48,7 +48,7 @@ export function renderTransferStacked(model, view, { noteBadges }) {
   for (const row of rows) for (const entry of row.to) {
     const recip = recipients.find((r) => r.id === entry.to);
     if (!recip) { problems.push(`${row.id} goes to ${entry.to}, which is not drawn`); continue; }
-    recip.flows.push({ row, share: entry.share, w: row.route === "trust" ? 2 : flowW(row.value == null ? null : row.value * entry.share) });
+    recip.flows?.push({ row, share: entry.share, w: row.route === "trust" ? 2 : flowW(row.value == null ? null : row.value * entry.share) });
   }
   // One lane per recipient in the gutter, sized to the ribbons it carries.
   const gutterW = W - M - gutterX - 6;
@@ -88,24 +88,24 @@ export function renderTransferStacked(model, view, { noteBadges }) {
   });
   const height = ry + 6;
 
-  const out = [], boxes = [], segments = [];
-  out.push(`<svg class="bt-figure bt-transfer bt-stacked" viewBox="0 0 ${W} ${height}" width="${W}" height="${height}" role="img" aria-label="${esc(view.title)}" xmlns="http://www.w3.org/2000/svg">`);
+  const out = geometryOnly ? null : [], boxes = [], segments = [];
+  out?.push(`<svg class="bt-figure bt-transfer bt-stacked" viewBox="0 0 ${W} ${height}" width="${W}" height="${height}" role="img" aria-label="${esc(view.title)}" xmlns="http://www.w3.org/2000/svg">`);
 
   // Bands.
   for (const band of bands) {
     const court = band.route === "probate";
     const gap = band.route === "unknown";
     const text = BAND_TEXT[band.route];
-    out.push(`<g class="bt-bandg" data-band="${band.route}"><rect class="bt-band${court ? " bt-band-court" : gap ? " bt-band-gap" : ""}" x="${M - 6}" y="${band.y}" width="${cardW + 12}" height="${band.h}" rx="12"/>`);
-    out.push(icon(text.icon, M + 4, band.y + 10, 13, `bt-icon${court || gap ? " bt-icon-flag" : ""}`));
-    out.push(`<text class="bt-bandhead${court || gap ? " bt-tone-flag" : ""}" x="${M + 22}" y="${band.y + 20}">${esc(text.title.toUpperCase())}</text>`);
-    band.subLines.forEach((line, k) => out.push(`<text class="bt-bandsub${court || gap ? " bt-tone-flag" : ""}" x="${M + 4}" y="${band.y + 36 + k * 15}">${esc(line)}</text>`));
-    out.push(`</g>`);
+    out?.push(`<g class="bt-bandg" data-band="${band.route}"><rect class="bt-band${court ? " bt-band-court" : gap ? " bt-band-gap" : ""}" x="${M - 6}" y="${band.y}" width="${cardW + 12}" height="${band.h}" rx="12"/>`);
+    out?.push(icon(text.icon, M + 4, band.y + 10, 13, `bt-icon${court || gap ? " bt-icon-flag" : ""}`));
+    out?.push(`<text class="bt-bandhead${court || gap ? " bt-tone-flag" : ""}" x="${M + 22}" y="${band.y + 20}">${esc(text.title.toUpperCase())}</text>`);
+    band.subLines.forEach((line, k) => out?.push(`<text class="bt-bandsub${court || gap ? " bt-tone-flag" : ""}" x="${M + 4}" y="${band.y + 36 + k * 15}">${esc(line)}</text>`));
+    out?.push(`</g>`);
   }
 
   // Ribbons: out of the card's right edge, into the gutter lane, down beside
   // the recipients, then left into the recipient's right edge.
-  const flows = [];
+  const flows = geometryOnly ? null : [];
   const laneCursor = recipLayout.map(() => 0);
   const entryCursor = recipLayout.map((r) => r.y + 30);
   for (const row of rows) {
@@ -123,11 +123,11 @@ export function renderTransferStacked(model, view, { noteBadges }) {
       const pts = [[M + cardW, y0], [lx, y0], [lx, ey], [recip.x + recip.w, ey]];
       const d = roundedPath(pts, 12);
       const cls = court ? " bt-flow-court bt-flow-later" : stay ? " bt-flow-stay" : "";
-      flows.push(`<path class="bt-flow${cls}" d="${d}" stroke-width="${w}" data-from="${esc(row.id)}" data-to="${esc(recip.id)}"/>`);
+      flows?.push(`<path class="bt-flow${cls}" d="${d}" stroke-width="${w}" data-from="${esc(row.id)}" data-to="${esc(recip.id)}"/>`);
       for (let k = 0; k < pts.length - 1; k++) segments.push({ a: pts[k], b: pts[k + 1], from: row.id, to: recip.id });
     }
   }
-  out.push(`<g class="bt-flows">${flows.join("")}</g>`);
+  out?.push(`<g class="bt-flows">${flows.join("")}</g>`);
 
   // Rows: one card each, with its station as a third line.
   for (const row of rows) {
@@ -135,52 +135,52 @@ export function renderTransferStacked(model, view, { noteBadges }) {
     const badges = noteBadges.get(row.id) ?? [];
     const court = ROUTES[row.route].court;
     const holdLines = holdLinesOf(row), dh = (holdLines.length - 1) * 13;
-    out.push(`<g class="bt-node" data-id="${esc(row.id)}" tabindex="0" role="group" aria-label="${esc(node.name)}">`);
+    out?.push(`<g class="bt-node" data-id="${esc(row.id)}" tabindex="0" role="group" aria-label="${esc(node.name)}">`);
     const rowH = row.h;
-    out.push(`<rect class="bt-card bt-asset${court ? " bt-t-flag" : ""}" x="${M}" y="${ry0}" width="${cardW}" height="${rowH}" rx="9"/>`);
-    out.push(icon(iconFor(node), M + 11, ry0 + 11, 13, "bt-icon"));
+    out?.push(`<rect class="bt-card bt-asset${court ? " bt-t-flag" : ""}" x="${M}" y="${ry0}" width="${cardW}" height="${rowH}" rx="9"/>`);
+    out?.push(icon(iconFor(node), M + 11, ry0 + 11, 13, "bt-icon"));
     const valueText = row.value == null ? "Not in documents" : money(row.value);
     const valueW = measure(valueText, "nameSm");
     const badgeW = badges.length * 20;
     const nameMax = cardW - 32 - 10 - valueW - 10 - badgeW;
     const name = measure(node.name, "nameSm") <= nameMax ? node.name : shortName(node);
-    out.push(`<text class="bt-name bt-name-sm" x="${M + 31}" y="${ry0 + 22}">${esc(wrap(name, "nameSm", nameMax, 1)[0])}</text>`);
-    out.push(`<text class="bt-value${row.value == null ? " bt-tone-ask" : ""}" x="${M + cardW - 10 - badgeW}" y="${ry0 + 22}" text-anchor="end" style="font-size:12.5px">${esc(valueText)}</text>`);
-    holdLines.forEach((line, k) => out.push(`<text class="bt-detail${court ? " bt-tone-flag" : ""}" x="${M + 31}" y="${ry0 + 40 + k * 13}" style="font-size:11.5px">${esc(line)}</text>`));
+    out?.push(`<text class="bt-name bt-name-sm" x="${M + 31}" y="${ry0 + 22}">${esc(wrap(name, "nameSm", nameMax, 1)[0])}</text>`);
+    out?.push(`<text class="bt-value${row.value == null ? " bt-tone-ask" : ""}" x="${M + cardW - 10 - badgeW}" y="${ry0 + 22}" text-anchor="end" style="font-size:12.5px">${esc(valueText)}</text>`);
+    holdLines.forEach((line, k) => out?.push(`<text class="bt-detail${court ? " bt-tone-flag" : ""}" x="${M + 31}" y="${ry0 + 40 + k * 13}" style="font-size:11.5px">${esc(line)}</text>`));
     // Station, as a pill inside the card.
     const sLines = stationLinesOf(row);
     const sw = Math.min(cardW - 22, Math.max(...sLines.map((l) => measure(l, "laneSub"))) + 30);
     const sh = 24 + (sLines.length - 1) * 13;
-    out.push(`<g class="bt-station${court ? " bt-station-court" : ""}" data-station="${esc(row.id)}"><rect x="${M + 11}" y="${ry0 + 50 + dh}" width="${sw}" height="${sh}" rx="12"/>`);
-    out.push(icon(court ? "clock" : "form", M + 19, ry0 + 55 + dh, 12, `bt-icon${court ? " bt-icon-flag" : ""}`));
-    sLines.forEach((line, k) => out.push(`<text class="bt-station-text${court ? " bt-tone-flag" : ""}" x="${M + 35}" y="${ry0 + 66 + dh + k * 13}" style="font-size:11px">${esc(line)}</text>`));
-    out.push(`</g>`);
-    badges.forEach((badge, k) => { const cx = M + cardW - 3 - k * 21, cy = ry0 + 3; out.push(`<g class="bt-badge bt-tone-${badge.tone}"><circle cx="${cx}" cy="${cy}" r="8.5"/><text x="${cx}" y="${cy + 3.4}" text-anchor="middle" style="font-size:10px">${badge.letter}</text></g>`); });
-    out.push(`</g>`);
+    out?.push(`<g class="bt-station${court ? " bt-station-court" : ""}" data-station="${esc(row.id)}"><rect x="${M + 11}" y="${ry0 + 50 + dh}" width="${sw}" height="${sh}" rx="12"/>`);
+    out?.push(icon(court ? "clock" : "form", M + 19, ry0 + 55 + dh, 12, `bt-icon${court ? " bt-icon-flag" : ""}`));
+    sLines.forEach((line, k) => out?.push(`<text class="bt-station-text${court ? " bt-tone-flag" : ""}" x="${M + 35}" y="${ry0 + 66 + dh + k * 13}" style="font-size:11px">${esc(line)}</text>`));
+    out?.push(`</g>`);
+    badges.forEach((badge, k) => { const cx = M + cardW - 3 - k * 21, cy = ry0 + 3; out?.push(`<g class="bt-badge bt-tone-${badge.tone}"><circle cx="${cx}" cy="${cy}" r="8.5"/><text x="${cx}" y="${cy + 3.4}" text-anchor="middle" style="font-size:10px">${badge.letter}</text></g>`); });
+    out?.push(`</g>`);
     boxes.push({ id: row.id, x: M, y: ry0, w: cardW, h: rowH });
-    fixLinesOf(row).forEach((line, k) => out.push(`<text class="bt-fix" data-fix="${esc(row.id)}" x="${M + 2}" y="${ry0 + rowH + 19 + k * 15}" style="font-size:11.5px">${k === 0 ? `<tspan class="bt-fix-label">The fix:</tspan> ` : ""}${esc(line)}</text>`));
+    fixLinesOf(row).forEach((line, k) => out?.push(`<text class="bt-fix" data-fix="${esc(row.id)}" x="${M + 2}" y="${ry0 + rowH + 19 + k * 15}" style="font-size:11.5px">${k === 0 ? `<tspan class="bt-fix-label">The fix:</tspan> ` : ""}${esc(line)}</text>`));
   }
 
   // Recipients.
   for (const recip of recipLayout) {
     const { x, y: by, w, h, node } = recip;
-    out.push(`<g class="bt-node" data-id="${esc(recip.id)}" tabindex="0" role="group" aria-label="${esc(node.name)}">`);
-    out.push(`<rect class="bt-card bt-recip bt-k-${node.kind}" x="${x}" y="${by}" width="${w}" height="${h}" rx="${node.kind === "person" ? 14 : 4}"/>`);
-    if (node.kind === "trust") out.push(`<path class="bt-deco" d="M${x + 4} ${by + 4.5}H${x + w - 4}"/>`);
-    (noteBadges.get(recip.id) ?? []).forEach((badge, k) => { const cx = x + w - 3 - k * 21, cy = by + 3; out.push(`<g class="bt-badge bt-tone-${badge.tone}"><circle cx="${cx}" cy="${cy}" r="8.5"/><text x="${cx}" y="${cy + 3.4}" text-anchor="middle" style="font-size:10px">${badge.letter}</text></g>`); });
-    out.push(icon(iconFor(node), x + 14, by + 13, 13, "bt-icon"));
-    out.push(`<text class="bt-kind" x="${x + 33}" y="${by + 23}">${esc((node.kind === "person" ? "Survivor" : node.kind === "law" ? "No will: intestacy" : kindLabel(node)).toUpperCase())}</text>`);
-    out.push(`<text class="bt-name bt-name-sm" x="${x + 14}" y="${by + 44}">${esc(node.name)}</text>`);
+    out?.push(`<g class="bt-node" data-id="${esc(recip.id)}" tabindex="0" role="group" aria-label="${esc(node.name)}">`);
+    out?.push(`<rect class="bt-card bt-recip bt-k-${node.kind}" x="${x}" y="${by}" width="${w}" height="${h}" rx="${node.kind === "person" ? 14 : 4}"/>`);
+    if (node.kind === "trust") out?.push(`<path class="bt-deco" d="M${x + 4} ${by + 4.5}H${x + w - 4}"/>`);
+    (noteBadges.get(recip.id) ?? []).forEach((badge, k) => { const cx = x + w - 3 - k * 21, cy = by + 3; out?.push(`<g class="bt-badge bt-tone-${badge.tone}"><circle cx="${cx}" cy="${cy}" r="8.5"/><text x="${cx}" y="${cy + 3.4}" text-anchor="middle" style="font-size:10px">${badge.letter}</text></g>`); });
+    out?.push(icon(iconFor(node), x + 14, by + 13, 13, "bt-icon"));
+    out?.push(`<text class="bt-kind" x="${x + 33}" y="${by + 23}">${esc((node.kind === "person" ? "Survivor" : node.kind === "law" ? "No will: intestacy" : kindLabel(node)).toUpperCase())}</text>`);
+    out?.push(`<text class="bt-name bt-name-sm" x="${x + 14}" y="${by + 44}">${esc(node.name)}</text>`);
     let ty = by + 44;
-    for (const line of recip.subtitleLines) { ty += 16; out.push(`<text class="bt-detail" x="${x + 14}" y="${ty}" style="font-size:11.5px">${esc(line)}</text>`); }
+    for (const line of recip.subtitleLines) { ty += 16; out?.push(`<text class="bt-detail" x="${x + 14}" y="${ty}" style="font-size:11.5px">${esc(line)}</text>`); }
     for (const line of recip.lines) {
       ty += 20;
       const tag = line.key ? ` data-line="${line.key}" data-amount="${line.amount}" data-suffix="${esc(line.suffix)}"` : "";
-      out.push(`<text class="bt-value${line.tone ? ` bt-tone-${line.tone}` : ""}"${tag} x="${x + 14}" y="${ty}" style="font-size:12.5px">${esc(line.text)}</text>`);
+      out?.push(`<text class="bt-value${line.tone ? ` bt-tone-${line.tone}` : ""}"${tag} x="${x + 14}" y="${ty}" style="font-size:12.5px">${esc(line.text)}</text>`);
     }
-    out.push(`</g>`);
+    out?.push(`</g>`);
     boxes.push({ id: recip.id, x, y: by, w, h });
   }
-  out.push(`</svg>`);
-  return { svg: out.join(""), width: W, height, geometry: { boxes, segments, labels: [], zones: [], crossings: 0, problems }, rows, routes: bands.map((b) => b.route), recipients: recipLayout };
+  out?.push(`</svg>`);
+  return { svg: out?.join(""), width: W, height, geometry: { boxes, segments, labels: [], zones: [], crossings: 0, problems }, rows, routes: bands.map((b) => b.route), recipients: recipLayout };
 }

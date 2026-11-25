@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { readFolder } from "./intake.mjs";
-import { inspectReview } from "./review.mjs";
+import { inspectReview, reviewConfirmationKey } from "./review.mjs";
 
 const folder = readFolder(fileURLToPath(new URL("../../examples/park/documents/", import.meta.url)));
 const parkedModel = JSON.parse(readFileSync(new URL("../../examples/park/household.json", import.meta.url), "utf8"));
@@ -41,4 +41,18 @@ test("uncited will and trust terms are refused", () => {
   const errors = inspectReview(draft, folder).errors.join("\n");
   assert.match(errors, /Cite what the will says for jordan/);
   assert.match(errors, /Cite signed papers for what trust does at a death/);
+});
+
+test("a confirmation follows the facts and gap set through layout edits", () => {
+  const draft = structuredClone(parkedModel);
+  const { gapList } = inspectReview(draft, folder);
+  const key = reviewConfirmationKey(draft, gapList);
+  draft.views.reverse();
+  draft.views[1].place.roth = [0, 0];
+  draft.holdings.reverse();
+  draft.documents = Object.fromEntries(Object.entries(draft.documents).reverse());
+  assert.equal(reviewConfirmationKey(draft, [...gapList].reverse()), key);
+  assert.notEqual(reviewConfirmationKey(draft, [...gapList, "A newer vehicle title"]), key);
+  draft.assets.car.name = "2022 Subaru Outback Limited";
+  assert.notEqual(reviewConfirmationKey(draft, gapList), key);
 });

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { normalize, todosFromIntake } from "../../kit/model.mjs";
 import { pagesCovered, verify } from "../../kit/verify.mjs";
 import { deathRoutes, QSBS_CONDITIONS } from "../../kit/derive.mjs";
@@ -5,6 +6,27 @@ import { deathRoutes, QSBS_CONDITIONS } from "../../kit/derive.mjs";
 const viewTypes = new Map([["whose-name", "structure"], ["at-a-death", "transfer"], ["qsbs", "structure"]]);
 const id = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 const documentOrUnknown = (source) => Boolean(source?.doc || source?.status === "unknown");
+
+function stableJson(value) {
+  return JSON.stringify(value, (_key, entry) => entry && typeof entry === "object" && !Array.isArray(entry)
+    ? Object.fromEntries(Object.entries(entry).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0))
+    : entry);
+}
+
+export function reviewConfirmationKey(raw, gaps) {
+  // The views choose scenarios from the facts. Their placement and copy can
+  // change as the model repairs the layout without changing the confirmation.
+  const { household, asOf, jurisdiction, documents, parties, assets, holdings, events, intake, views } = raw;
+  const scenarios = views.map(({ id, event, ledger }) => ({ id, event, ledger }));
+  const intakeFindings = (intake?.lookedFor ?? []).map(({ what, result, doc }) => ({ what, result, doc }));
+  return createHash("sha256").update(stableJson({
+    household, asOf, jurisdiction, documents, parties, assets, events,
+    holdings: holdings.map(stableJson).sort(),
+    intake: intakeFindings.map(stableJson).sort(),
+    scenarios: scenarios.map(stableJson).sort(),
+    gaps: [...new Set(gaps)].sort(),
+  })).digest("hex");
+}
 
 function citationPages(at) {
   if (typeof at !== "string" || at.length > 160) return [];

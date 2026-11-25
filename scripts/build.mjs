@@ -22,6 +22,7 @@ const input = args.find((a) => !a.startsWith("--"));
 if (!input) { console.error("usage: node scripts/build.mjs <household.json> [--out dir] [--force]"); process.exit(2); }
 const outDir = resolve(args.includes("--out") ? args[args.indexOf("--out") + 1] : join(dirname(input), "out"));
 const force = args.includes("--force");
+const geometryOnly = args.includes("--audit-only");
 const model = loadModel(input);
 
 const facts = verify(model);
@@ -67,8 +68,8 @@ function buildView(view) {
     if (trustDoc && trustDoc.signed !== "signed" && !view.kicker) view.kicker = `The copy we have of the trust papers is ${trustDoc.signed === "unsigned" ? "unsigned" : "not shown as signed"}. If the signed set exists, the trust’s list most likely already covers what it names; if it doesn’t, nothing is in the trust yet.`;
   }
   if (view.type === "structure") {
-    rendered = renderStructure(model, view, { noteBadges });
-    stacked = renderStructureStacked(model, view, { noteBadges });
+    rendered = renderStructure(model, view, { noteBadges, geometryOnly });
+    stacked = renderStructureStacked(model, view, { noteBadges, geometryOnly });
     const stackedAudit = auditLayout(stacked.geometry);
     console.log(`view ${view.id} (stacked): layout audit ${stackedAudit.ok ? "passed" : "FAILED"}`);
     for (const p of stackedAudit.problems) console.log(`      ${p}`);
@@ -77,15 +78,15 @@ function buildView(view) {
     if (view.relations?.length) legend.push({ kind: "rel", text: view.relations.map((r) => r.label).filter((v, i, a) => a.indexOf(v) === i).join(" · ") });
     if (view.gaps?.length) legend.push({ kind: "gap", text: view.gaps[0].label });
     for (const zone of view.zones ?? []) if (!legend.find((l) => l.kind === `zone-${zone.tone}`)) legend.push({ kind: `zone-${zone.tone}`, text: zone.taxpayer ? "One taxpayer for income tax" : zone.legend ?? zone.label });
-    if (view.ledger?.kind === "qsbs") {
+    if (!geometryOnly && view.ledger?.kind === "qsbs") {
       const assumptionNote = notes.find((n) => n.on === view.ledger.issuer || n.tone === "ask");
       const ledger = renderQsbsLedger(model, { ...view.ledger, assumptionLetter: assumptionNote?.letter }, rendered.width);
       extraSections.push(ledger.svg + ledger.checklist);
       receipt.push({ text: `Each taxpayer’s exclusion is worked out from the cap table, not estimated` });
     }
   } else if (view.type === "transfer") {
-    rendered = renderTransfer(model, view, { noteBadges });
-    stacked = renderTransferStacked(model, view, { noteBadges });
+    rendered = renderTransfer(model, view, { noteBadges, geometryOnly });
+    stacked = renderTransferStacked(model, view, { noteBadges, geometryOnly });
     const stackedAudit = auditLayout(stacked.geometry);
     console.log(`view ${view.id} (stacked): layout audit ${stackedAudit.ok ? "passed" : "FAILED"}`);
     for (const p of stackedAudit.problems) console.log(`      ${p}`);
@@ -101,6 +102,7 @@ function buildView(view) {
   for (const p of layout.problems) console.log(`      ${p}`);
   // The layout audit gates the build; it is a maker's check, not a reader's, so it stays out of the page.
   if (!layout.ok) failed = true;
+  if (geometryOnly) return;
 
   const html = pageHtml({ model, view, figureSvg: rendered.svg, figureWidth: rendered.width, stackedSvg: stacked?.svg ?? null, extraSections, notes, legend, receipt, sourcesUsed: citedDocs,
     readerNote: args.includes("--eve") ? "Your Vercel deployment keeps document text in eve’s session history and uploaded files in the sandbox. The model reads the text through Vercel AI Gateway." : undefined });
@@ -118,7 +120,7 @@ for (const view of model.views) {
   }
 }
 
-if (failed && !force) process.exit(1);
+if (geometryOnly || (failed && !force)) process.exit(failed ? 1 : 0);
 mkdirSync(outDir, { recursive: true });
 for (const { file, html } of pages) {
   writeFileSync(file, html);

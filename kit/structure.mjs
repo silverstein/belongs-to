@@ -212,7 +212,7 @@ function permutations(items) {
   return items.flatMap((item, i) => permutations([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [item, ...rest]));
 }
 
-export function renderStructure(model, view, { noteBadges }) {
+export function renderStructure(model, view, { noteBadges, geometryOnly = false }) {
   const W = view.cardWidth ?? 184;
   const PITCH = view.pitch ?? W + 24;
   const MARGIN = 26;
@@ -431,34 +431,34 @@ export function renderStructure(model, view, { noteBadges }) {
   const width = Math.max(...ids.map((id) => xOf(id) + W)) + MARGIN;
   const height = Math.max(...ids.map(bottomOf)) + 30;
 
-  const svg = [];
-  svg.push(`<svg class="bt-figure" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${esc(view.title)}" xmlns="http://www.w3.org/2000/svg">`);
-  svg.push(`<defs><marker id="bt-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="bt-arrowhead" d="M1 1.5L9 5L1 8.5z"/></marker><marker id="bt-arrow-gap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="bt-arrowhead-gap" d="M1 1.5L9 5L1 8.5z"/></marker></defs>`);
+  const svg = geometryOnly ? null : [];
+  svg?.push(`<svg class="bt-figure" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${esc(view.title)}" xmlns="http://www.w3.org/2000/svg">`);
+  svg?.push(`<defs><marker id="bt-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="bt-arrowhead" d="M1 1.5L9 5L1 8.5z"/></marker><marker id="bt-arrow-gap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="bt-arrowhead-gap" d="M1 1.5L9 5L1 8.5z"/></marker></defs>`);
   for (const zone of zones) {
-    svg.push(`<g class="bt-zone bt-zone-${zone.tone}" data-zone="${esc(zone.id)}"><rect x="${zone.x}" y="${zone.y}" width="${zone.w}" height="${zone.h}" rx="${zone.tone === "ok" ? 18 : 14}"/>`);
+    svg?.push(`<g class="bt-zone bt-zone-${zone.tone}" data-zone="${esc(zone.id)}"><rect x="${zone.x}" y="${zone.y}" width="${zone.w}" height="${zone.h}" rx="${zone.tone === "ok" ? 18 : 14}"/>`);
     // The tab sits on the top border wherever no line crosses it: left, then right.
     const lw = measure(zone.label, "zone") + 20;
     const clear = (tx) => !segments.some((seg) => { const minX = Math.min(seg.a[0], seg.b[0]), maxX = Math.max(seg.a[0], seg.b[0]), minY = Math.min(seg.a[1], seg.b[1]), maxY = Math.max(seg.a[1], seg.b[1]); return maxX > tx - 3 && minX < tx + lw + 3 && maxY > zone.y - 10 && minY < zone.y + 10; });
     const tx = [zone.x + 14, zone.x + zone.w - 14 - lw].find(clear) ?? zone.x + 14;
-    svg.push(`<rect class="bt-zone-tab" x="${tx}" y="${zone.y - 10}" width="${lw}" height="20" rx="10"/><text class="bt-zone-label" x="${tx + 10}" y="${zone.y + 4}">${esc(zone.label)}</text></g>`);
+    svg?.push(`<rect class="bt-zone-tab" x="${tx}" y="${zone.y - 10}" width="${lw}" height="20" rx="10"/><text class="bt-zone-label" x="${tx + 10}" y="${zone.y + 4}">${esc(zone.label)}</text></g>`);
     zone.labelBox = { x: tx, y: zone.y - 10, w: lw, h: 20 };
   }
-  svg.push(`<g class="bt-edges">`);
-  for (const p of paths) svg.push(`<path class="bt-halo" d="${p.d}"/>`);
-  for (const p of paths) svg.push(`<path class="${p.cls}" d="${p.d}" data-from="${esc(p.from)}" data-to="${esc(p.to)}" marker-end="url(#bt-arrow)"/>`);
-  for (const gp of gapPaths) svg.push(`<path class="bt-halo" d="${gp.d}"/><path class="bt-gap" d="${gp.d}" marker-end="url(#bt-arrow-gap)"/>`);
-  svg.push(`</g>`);
+  svg?.push(`<g class="bt-edges">`);
+  for (const p of paths) svg?.push(`<path class="bt-halo" d="${p.d}"/>`);
+  for (const p of paths) svg?.push(`<path class="${p.cls}" d="${p.d}" data-from="${esc(p.from)}" data-to="${esc(p.to)}" marker-end="url(#bt-arrow)"/>`);
+  for (const gp of gapPaths) svg?.push(`<path class="bt-halo" d="${gp.d}"/><path class="bt-gap" d="${gp.d}" marker-end="url(#bt-arrow-gap)"/>`);
+  svg?.push(`</g>`);
   const labelBoxes = [];
   for (const label of labels) {
     const w = measure(label.text, "chip") + 12;
     const box = { x: label.x - w / 2, y: label.y - 9, w, h: 18 };
     labelBoxes.push({ ...box, text: label.text });
-    svg.push(`<g class="bt-chip${label.rel ? " bt-chip-rel" : ""}${label.gap ? " bt-chip-gap" : ""}"><rect x="${box.x}" y="${box.y}" width="${w}" height="18" rx="9"/><text x="${label.x}" y="${label.y + 3.8}" text-anchor="middle">${esc(label.text)}</text></g>`);
+    svg?.push(`<g class="bt-chip${label.rel ? " bt-chip-rel" : ""}${label.gap ? " bt-chip-gap" : ""}"><rect x="${box.x}" y="${box.y}" width="${w}" height="18" rx="9"/><text x="${label.x}" y="${label.y + 3.8}" text-anchor="middle">${esc(label.text)}</text></g>`);
   }
-  for (const id of ids) svg.push(drawCard(cards[id], xOf(id), topOf(id), W));
-  svg.push(`</svg>`);
+  for (const id of ids) svg?.push(drawCard(cards[id], xOf(id), topOf(id), W));
+  svg?.push(`</svg>`);
 
   const boxes = ids.map((id) => ({ id, x: xOf(id), y: topOf(id), w: W, h: cards[id].height }));
   const gapCrossings = [...lanesByGap.values()].reduce((s, g) => s + g.crossings, 0);
-  return { svg: svg.join(""), width, height, geometry: { boxes, segments, labels: labelBoxes, zones, crossings: gapCrossings, problems } };
+  return { svg: svg?.join(""), width, height, geometry: { boxes, segments, labels: labelBoxes, zones, crossings: gapCrossings, problems } };
 }

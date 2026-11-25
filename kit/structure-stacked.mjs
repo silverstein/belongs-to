@@ -8,7 +8,7 @@ import { holdingsOf, holdingsBy, shortName } from "./model.mjs";
 import { layoutCard, drawCard } from "./structure.mjs";
 import { measure, esc, shares as fmtShares, pct, listJoin, inSentence } from "./text.mjs";
 
-export function renderStructureStacked(model, view, { noteBadges }) {
+export function renderStructureStacked(model, view, { noteBadges, geometryOnly = false }) {
   const W = 420, M = 14, INDENT = 22, GAP = 10, CHIP_H = 18;
   const placed = new Set(Object.keys(view.place ?? {}));
   const problems = [];
@@ -83,21 +83,21 @@ export function renderStructureStacked(model, view, { noteBadges }) {
     return { ...zone, x: M - 7, y: top - (zone.first ? 12 : 0), w: W - 2 * M + 14, h: bottom - top + (zone.first ? 12 : 0) };
   });
 
-  const out = [], boxes = [], segments = [], labels = [];
-  out.push(`<svg class="bt-figure bt-stacked" viewBox="0 0 ${W} ${height}" width="${W}" height="${height}" role="img" aria-label="${esc(view.title)}" xmlns="http://www.w3.org/2000/svg">`);
+  const out = geometryOnly ? null : [], boxes = [], segments = [], labels = [];
+  out?.push(`<svg class="bt-figure bt-stacked" viewBox="0 0 ${W} ${height}" width="${W}" height="${height}" role="img" aria-label="${esc(view.title)}" xmlns="http://www.w3.org/2000/svg">`);
   for (const zone of zones) {
-    out.push(`<g class="bt-zone bt-zone-${zone.tone}" data-zone="${esc(zone.id)}"><rect x="${zone.x}" y="${zone.y}" width="${zone.w}" height="${zone.h}" rx="14"/>`);
+    out?.push(`<g class="bt-zone bt-zone-${zone.tone}" data-zone="${esc(zone.id)}"><rect x="${zone.x}" y="${zone.y}" width="${zone.w}" height="${zone.h}" rx="14"/>`);
     if (zone.first) {
       // The tab sits at the right end of the top edge, clear of the connector lines on the left.
       const lw = Math.min(zone.w - 24, measure(zone.label, "zone") + 20);
       const tx = zone.x + zone.w - 12 - lw;
-      out.push(`<rect class="bt-zone-tab" x="${tx}" y="${zone.y - 10}" width="${lw}" height="20" rx="10"/><text class="bt-zone-label" x="${tx + 10}" y="${zone.y + 4}">${esc(zone.label)}</text>`);
+      out?.push(`<rect class="bt-zone-tab" x="${tx}" y="${zone.y - 10}" width="${lw}" height="20" rx="10"/><text class="bt-zone-label" x="${tx + 10}" y="${zone.y + 4}">${esc(zone.label)}</text>`);
       zone.labelBox = { x: tx, y: zone.y - 10, w: lw, h: 20 };
     }
-    out.push(`</g>`);
+    out?.push(`</g>`);
   }
   // Connectors: a line down the parent's left margin with a stub to each nested card.
-  out.push(`<g class="bt-edges">`);
+  out?.push(`<g class="bt-edges">`);
   for (const [i, id] of rows.entries()) {
     const card = cards[id];
     const kids = rows.slice(i + 1).filter((k) => cards[k].depth === card.depth + 1 && !cards[k].shared && rows.slice(i + 1, rows.indexOf(k)).every((m) => cards[m].depth > card.depth));
@@ -105,27 +105,27 @@ export function renderStructureStacked(model, view, { noteBadges }) {
     const lx = card.x + 11;
     const last = cards[kids.at(-1)];
     const lastY = last.y + Math.min(26, last.height / 2);
-    out.push(`<path class="bt-edge" d="M${lx} ${card.y + card.height}V${lastY}"/>`);
+    out?.push(`<path class="bt-edge" d="M${lx} ${card.y + card.height}V${lastY}"/>`);
     segments.push({ a: [lx, card.y + card.height], b: [lx, lastY], from: id });
     for (const k of kids) {
       const kc = cards[k];
       const ky = kc.y + Math.min(26, kc.height / 2);
-      out.push(`<path class="bt-edge" d="M${lx} ${ky}H${kc.x}" marker-end="url(#bt-arrow)"/>`);
+      out?.push(`<path class="bt-edge" d="M${lx} ${ky}H${kc.x}" marker-end="url(#bt-arrow)"/>`);
       segments.push({ a: [lx, ky], b: [kc.x, ky], from: id, to: k });
     }
   }
-  out.push(`</g>`);
-  out.push(`<defs><marker id="bt-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="bt-arrowhead" d="M1 1.5L9 5L1 8.5z"/></marker></defs>`);
+  out?.push(`</g>`);
+  out?.push(`<defs><marker id="bt-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="bt-arrowhead" d="M1 1.5L9 5L1 8.5z"/></marker></defs>`);
   for (const id of rows) {
     const card = cards[id];
     for (const chip of card.chips) {
       const cx = card.x + chip.dx, cy = card.chipTop + chip.row * (CHIP_H + 4);
-      out.push(`<g class="bt-chip ${chip.cls}"><rect x="${cx}" y="${cy}" width="${chip.w}" height="${CHIP_H}" rx="9"/><text x="${cx + chip.w / 2}" y="${cy + 12.5}" text-anchor="middle">${esc(chip.text)}</text></g>`);
+      out?.push(`<g class="bt-chip ${chip.cls}"><rect x="${cx}" y="${cy}" width="${chip.w}" height="${CHIP_H}" rx="9"/><text x="${cx + chip.w / 2}" y="${cy + 12.5}" text-anchor="middle">${esc(chip.text)}</text></g>`);
       labels.push({ x: cx, y: cy, w: chip.w, h: CHIP_H, text: chip.text });
     }
-    out.push(drawCard(card, card.x, card.y, card.width));
+    out?.push(drawCard(card, card.x, card.y, card.width));
     boxes.push({ id, x: card.x, y: card.y, w: card.width, h: card.height });
   }
-  out.push(`</svg>`);
-  return { svg: out.join(""), width: W, height, geometry: { boxes, segments, labels, zones, crossings: 0, problems } };
+  out?.push(`</svg>`);
+  return { svg: out?.join(""), width: W, height, geometry: { boxes, segments, labels, zones, crossings: 0, problems } };
 }
