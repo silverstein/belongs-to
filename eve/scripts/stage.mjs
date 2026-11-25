@@ -20,7 +20,7 @@ const skillSource = readFileSync(join(root, "SKILL.md"), "utf8");
 writeFileSync(join(skill, "SKILL.md"), skillSource.replace(/<!-- standalone:start -->[\s\S]*?<!-- standalone:end -->\n*/g, ""));
 cpSync(join(root, "references"), join(skill, "references"), { recursive: true });
 cpSync(join(root, "scripts/build.mjs"), join(workspace, "scripts/build.mjs"));
-for (const filename of ["intake.mjs", "review.mjs", "run-review.mjs"]) {
+for (const filename of ["intake.mjs", "preview.mjs", "review.mjs", "run-review.mjs"]) {
   cpSync(join(app, "lib", filename), join(workspace, "eve/lib", filename));
 }
 

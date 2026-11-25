@@ -1,5 +1,6 @@
-import { FileText } from "lucide-react";
-import type { UseEveAgentReturn } from "eve/react";
+import { useEffect, useRef, useState } from "react";
+import { FileCheck, FileText } from "lucide-react";
+import { SessionStore, type SessionStoreInit, type SessionStoreSnapshot } from "eve/client";
 import {
   Attachment, AttachmentContent, AttachmentDescription, AttachmentGroup, AttachmentMedia, AttachmentTitle,
 } from "@/components/ui/attachment";
@@ -7,6 +8,7 @@ import {
   Trace, TraceCollapsible, TraceCollapsibleContent, TraceCollapsibleTrigger, TraceDescription, TraceIcon, TraceLine, TraceTitle,
 } from "@/components/ui/trace";
 import { RecordKey, RecordMark } from "./record-mark";
+import { DraftSketch, motionDelay, useDraftSketch } from "./draft-sketch";
 
 export type DocumentInfo = { name: string; pages: number };
 type CheckStatus = "passed" | "failed" | "skipped";
@@ -30,7 +32,29 @@ type Activity = {
 const object = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 
-export function reviewActivity(events: UseEveAgentReturn["events"]): Activity {
+export function useReviewSession(headers: SessionStoreInit["headers"], onError: (error: Error) => void) {
+  const [store] = useState(() => new SessionStore({ headers }));
+  const [snapshot, setSnapshot] = useState(store.snapshot);
+  store.setCallbacks({ onError });
+  useEffect(() => {
+    let frame: number | undefined;
+    const unsubscribe = store.subscribe(() => {
+      if (frame === undefined) frame = requestAnimationFrame(() => {
+        frame = undefined;
+        setSnapshot(store.snapshot);
+      });
+    });
+    const stop = store.observe();
+    return () => {
+      unsubscribe();
+      stop();
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    };
+  }, [store]);
+  return { store, snapshot };
+}
+
+export function reviewActivity(events: SessionStoreSnapshot["events"]): Activity {
   const read = new Map<string, number>();
   const calls = new Map<string, string>();
   const pendingReads = new Set<string>();
@@ -112,6 +136,7 @@ export function reviewActivity(events: UseEveAgentReturn["events"]): Activity {
 }
 
 export function DocumentCards({ documents, activity }: { documents: DocumentInfo[]; activity: Activity }) {
+  const readOrder = [...activity.read.keys()];
   return (
     <section className="documents reveal" aria-label="Uploaded documents">
       <div className="section-heading">
@@ -124,7 +149,11 @@ export function DocumentCards({ documents, activity }: { documents: DocumentInfo
           const count = checked ?? pages;
           return (
             <Attachment key={name} className="document-card" data-read={checked !== undefined}>
-              <AttachmentMedia className="document-icon">{checked !== undefined ? <RecordMark kind="found" /> : <FileText />}</AttachmentMedia>
+              <AttachmentMedia className="document-icon">
+                {checked !== undefined
+                  ? <FileCheck className="mark-settle" style={motionDelay(readOrder.indexOf(name))} aria-hidden="true" />
+                  : <FileText aria-hidden="true" />}
+              </AttachmentMedia>
               <AttachmentContent className="min-w-0">
                 <AttachmentTitle title={name}>{name}</AttachmentTitle>
                 <AttachmentDescription>{count ? `${count} ${count === 1 ? "page" : "pages"}${checked !== undefined ? " read" : ""}` : "Pages pending"}</AttachmentDescription>
@@ -137,13 +166,14 @@ export function DocumentCards({ documents, activity }: { documents: DocumentInfo
   );
 }
 
-export function TraceRow({ title, status, detail }: {
-  title: string; status: CheckStatus | "running"; detail?: string;
+export function TraceRow({ title, status, detail, shimmer = false }: {
+  title: string; status: CheckStatus | "running"; detail?: string; shimmer?: boolean;
 }) {
+  const kind = status === "passed" ? "confirmed" : status === "running" ? "found" : status === "failed" ? "failed" : "missing";
   return (
     <TraceLine status={status === "failed" ? "error" : status === "running" ? "running" : status === "skipped" ? "pending" : undefined} className="trace-row">
-      <TraceIcon><RecordMark kind={status === "passed" ? "confirmed" : status === "running" ? "found" : status === "failed" ? "failed" : "missing"} /></TraceIcon>
-      <TraceTitle>{title}</TraceTitle>
+      <TraceIcon><span key={kind} className="mark-settle"><RecordMark kind={kind} /></span></TraceIcon>
+      <TraceTitle><span className={shimmer ? "active-step-label" : undefined} data-label={shimmer ? title : undefined}>{title}</span></TraceTitle>
       {detail && <TraceDescription>{detail}</TraceDescription>}
     </TraceLine>
   );
@@ -158,44 +188,79 @@ function tally(totals?: Totals) {
   return totals.failed ? `${totals.failed} of ${totals.checked} need repair` : `${totals.checked} passed`;
 }
 
-function AuditRows({ audit }: { audit: Audit }) {
-  return <>
-    <TraceRow title="Citations point to pages read" status={outcome(audit.audit?.citations)}
-      detail={tally(audit.audit?.citations)} />
-    <TraceRow title="Dollar amounts on the page" status={outcome(audit.audit?.dollars)}
-      detail={tally(audit.audit?.dollars)} />
-    <TraceRow title="Names on the page" status={outcome(audit.audit?.names)}
-      detail={tally(audit.audit?.names)} />
-    <TraceRow title="Household facts" status={audit.facts} detail={statusText[audit.facts]} />
-    <TraceRow title="Drawing layout" status={audit.layout} detail={statusText[audit.layout]} />
-  </>;
-}
-
 const statusText = { passed: "Passed", failed: "Needs repair", skipped: "Not run" };
 
-export function ReviewTrace({ activity, busy, hasQuestion, hasPacket }: {
+function AuditRows({ audit }: { audit: Audit }) {
+  const rows = [
+    { title: "Citations point to pages read", totals: audit.audit?.citations },
+    { title: "Dollar amounts on the page", totals: audit.audit?.dollars },
+    { title: "Names on the page", totals: audit.audit?.names },
+    { title: "Household facts", status: audit.facts },
+    { title: "Drawing layout", status: audit.layout },
+  ];
+  return rows.map(({ title, totals, status }, index) => (
+    <div className="enter-record" key={title} style={motionDelay(index)}>
+      <TraceRow title={title} status={status ?? outcome(totals)} detail={status ? statusText[status] : tally(totals)} />
+    </div>
+  ));
+}
+
+function ActiveStep({ title, count, writing, lastEvent }: {
+  title: string; count?: string; writing: boolean; lastEvent: SessionStoreSnapshot["events"][number] | undefined;
+}) {
+  const [started] = useState(Date.now);
+  const [now, setNow] = useState(started);
+  const lastUpdate = useRef(started);
+  useEffect(() => { lastUpdate.current = Date.now(); }, [lastEvent]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const elapsed = Math.floor((now - started) / 1000);
+  const idle = Math.floor((now - lastUpdate.current) / 1000);
+  const quiet = idle >= 20;
+  const duration = elapsed < 60 ? `${elapsed} s` : `${Math.floor(elapsed / 60)}m ${String(elapsed % 60).padStart(2, "0")}s`;
+  return <div className="active-step" data-quiet={quiet}>
+    <TraceRow title={title} status="running" detail={duration} shimmer={Boolean(lastEvent) && !quiet} />
+    {count && <p className="active-step-detail">{count}</p>}
+    {quiet && <p className="active-step-detail">Still {writing ? "writing" : "working"}, last update {idle} s ago</p>}
+  </div>;
+}
+
+export function ReviewTrace({ activity, busy, hasQuestion, hasPacket, lastEvent, inputText }: {
   activity: Activity; busy: boolean; hasQuestion: boolean; hasPacket: boolean;
+  lastEvent: SessionStoreSnapshot["events"][number] | undefined; inputText?: string;
 }) {
   const current = activity.attempts.at(-1);
   const noticed = activity.read.size > 0 || current;
   const evidence = current?.audit?.evidence ?? activity.attempts.findLast((item) => item.audit?.evidence?.length)?.audit?.evidence ?? [];
   const active = !hasQuestion && !hasPacket && busy;
+  const writing = current?.stage === "drafting";
+  const checking = current?.stage === "checking";
+  const sketch = useDraftSketch(active && (writing || checking) ? current?.id : undefined, inputText);
   const label = activity.reading ? "Reading the uploaded pages"
     : current?.stage === "rendering" ? "Drawing the approved pages"
-    : current?.stage === "checking" ? "Checking the draft"
-    : current?.stage === "drafting" || current?.errors?.length ? "Drafting the household picture"
+    : current?.stage === "checked" ? "Preparing the review question"
+    : writing || current?.errors?.length ? "Drafting the household picture"
     : activity.read.size ? "Working from the cited documents" : "Opening the folder";
+  const count = writing ? sketch?.count
+    ? `${sketch.count} ${sketch.count === 1 ? "record" : "records"} written`
+    : inputText ? `${inputText.length.toLocaleString("en-US")} draft characters received` : undefined
+    : current?.audit?.evidence?.length ? `${current.audit.evidence.length} facts cited`
+    : activity.read.size ? `${activity.read.size} ${activity.read.size === 1 ? "file" : "files"} read` : undefined;
   return (
     <section className="review-trace reveal" aria-label="Review activity">
       <div className="section-heading"><h3>Review activity</h3></div>
       <Trace>
-        {activity.read.size > 0 && <TraceRow title="Documents read" status="running" detail={`${activity.read.size} files`} />}
+        {activity.read.size > 0 && !activity.reading && <TraceRow title="Documents read" status="passed" detail={`${activity.read.size} files`} />}
         {activity.attempts.map((item, index) => {
-          const failed = Boolean(item.errors?.length);
+          if (item.stage === "drafting") return null;
+          const failed = Boolean(item.errors?.length) || item.audit?.facts === "failed" || item.audit?.layout === "failed";
           const earlier = activity.attempts[index - 1];
           const title = earlier?.errors?.length ? `Repair ${index}` : earlier ? "Check revised draft" : "Check the draft";
-          const status = failed ? "failed" : item.audit?.layout === "passed" ? "passed" : "running";
+          const status = failed ? "failed" : item.audit?.layout === "passed" || item.stage === "settled" ? "passed" : "running";
           const detail = failed ? "Needs repair" : status === "passed" ? "Passed" : undefined;
+          if (item === current && checking && active) return <ActiveStep key={item.id} title={title} count={count} writing={false} lastEvent={lastEvent} />;
           if (!item.audit && !failed) return <TraceRow key={item.id} title={title} status={status} />;
           return (
             <TraceCollapsible key={item.id} defaultOpen>
@@ -212,19 +277,22 @@ export function ReviewTrace({ activity, busy, hasQuestion, hasPacket }: {
             </TraceCollapsible>
           );
         })}
-        {active && <TraceRow title={label} status="running" />}
         {!noticed && !active && !hasQuestion && <TraceRow title="Waiting for a folder" status="skipped" />}
       </Trace>
+      {sketch && sketch.count > 0 && <DraftSketch sketch={sketch} />}
       {evidence.length > 0 && (
         <details className="evidence" open>
           <summary>{evidence.length} names and amounts found on cited pages</summary>
-          <ul>{evidence.map(({ text, doc, at }) => <li key={`${text}:${doc}:${at}`}>
+          <ul>{evidence.map(({ text, doc, at }, index) => <li key={`${text}:${doc}:${at}`} className="enter-record" style={motionDelay(index)}>
             <RecordMark kind="confirmed" />
             <span className="evidence-value" data-amount={/^-?\$\d/.test(text)}>{text}</span>
             <span className="evidence-source">{doc}, {at}</span>
           </li>)}</ul>
         </details>
       )}
+      {active && !checking && <Trace className="active-trace">
+        <ActiveStep key={`${current?.id ?? "read"}:${label}`} title={label} count={count} writing={writing} lastEvent={lastEvent} />
+      </Trace>}
       {activity.told.map((answer, index) => <p key={index} className="answer-record"><RecordMark kind="told" /> The family answered {answer}.</p>)}
       <RecordKey />
     </section>

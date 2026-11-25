@@ -7,6 +7,7 @@ import { FAMILIES, fontFaceCss } from "../../kit/fonts.mjs";
 import { foundationCss } from "../../kit/page.mjs";
 import { esc } from "../../kit/text.mjs";
 import { readFolder } from "./intake.mjs";
+import { previewReadyScript } from "./preview.mjs";
 import { inspectReview, reviewConfirmationKey } from "./review.mjs";
 
 const confirmationPath = join("reviews", "confirmation.json");
@@ -21,11 +22,11 @@ function readConfirmation() {
 
 function pack(name, html, checkScript = false) {
   const script = checkScript ? html.match(/<script>([\s\S]*?)<\/script>\s*<\/body>\s*<\/html>\s*$/)?.[1] : undefined;
-  const scriptPolicy = script
-    ? `'sha256-${createHash("sha256").update(script).digest("base64")}'`
-    : "'none'";
+  const scriptPolicy = [previewReadyScript, script].filter(Boolean)
+    .map((source) => `'sha256-${createHash("sha256").update(source).digest("base64")}'`).join(" ");
   const policy = `default-src 'none'; script-src ${scriptPolicy}; style-src 'unsafe-inline'; font-src data:; img-src data:; base-uri 'none'; form-action 'none'`;
-  const secured = html.replace("<head>", `<head><meta http-equiv="Content-Security-Policy" content="${policy}">`);
+  const secured = html.replace("<head>", `<head><meta http-equiv="Content-Security-Policy" content="${policy}">`)
+    .replace("</body>", () => `<script>${previewReadyScript}</script></body>`);
   const css = fontFaceCss();
   return {
     name,

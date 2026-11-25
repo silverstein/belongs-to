@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Download, Expand, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { previewReady } from "../lib/preview.mjs";
 
 const labels: Record<string, string> = {
   "whose-name.html": "Whose name is it in?",
@@ -29,6 +30,35 @@ async function decode(file: DownloadFile) {
   }).catch((error) => { fontStyles = undefined; throw error; });
   const fonts = await fontStyles;
   return text.replace("/* BELONGS_TO_EMBED_FONTS */", () => fonts);
+}
+
+function DrawingPreview({ title, html, onRetry }: { title: string; html: string; onRetry: () => void }) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
+  const hasReadySignal = html.includes(previewReady);
+  useLayoutEffect(() => {
+    if (!hasReadySignal) return;
+    const timer = window.setTimeout(() => setStatus("failed"), 15_000);
+    function loaded(event: MessageEvent) {
+      if (event.source !== frame.current?.contentWindow || event.data !== previewReady) return;
+      window.clearTimeout(timer);
+      setStatus("ready");
+    }
+    window.addEventListener("message", loaded);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("message", loaded);
+    };
+  }, [hasReadySignal]);
+  return <div className="preview-frame" data-ready={status === "ready"}>
+    <iframe ref={frame} className="preview" title={title} sandbox="allow-scripts" srcDoc={html}
+      onLoad={hasReadySignal ? undefined : () => setStatus("ready")}
+      aria-hidden={status !== "ready"} tabIndex={status === "ready" ? undefined : -1} />
+    {status === "loading" && <p className="preview-status" role="status">Opening {title}</p>}
+    {status === "failed" && <div className="preview-status" role="alert">
+      The preview could not be opened. <Button variant="outline" onClick={onRetry}>Retry preview</Button>
+    </div>}
+  </div>;
 }
 
 export function ReviewPacket({ files, theme, onError }: { files: DownloadFile[]; theme: string; onError: (error: unknown) => void }) {
@@ -71,7 +101,7 @@ export function ReviewPacket({ files, theme, onError }: { files: DownloadFile[];
 
   const model = files.find((file) => file.name === "household.json");
   return (
-    <section className="packet reveal" aria-label="Downloads">
+    <section className="packet" aria-label="Downloads">
       <div className="section-heading"><h3>Your pages</h3></div>
       <div className="packet-toolbar">
         <div className="paper-tabs" role="group" aria-label="Choose a page">
@@ -82,10 +112,11 @@ export function ReviewPacket({ files, theme, onError }: { files: DownloadFile[];
       </div>
       {page && (
         <>
-          {html !== undefined ? <iframe className="preview" title={labels[page.name]} sandbox="allow-scripts" srcDoc={themed} />
+          {themed !== undefined ? <DrawingPreview key={`${page.name}:${theme}:${previewRetry}`} title={labels[page.name]} html={themed}
+            onRetry={() => setPreviewRetry((count) => count + 1)} />
             : previewError ? <div className="preview-note" role="alert">
               The preview could not be opened. <Button variant="outline" onClick={() => setPreviewRetry((count) => count + 1)}>Retry preview</Button>
-            </div> : <p className="preview-note" role="status">Opening {labels[page.name]}</p>}
+            </div> : <div className="preview-frame"><p className="preview-status" role="status">Opening {labels[page.name]}</p></div>}
           <div className="packet-actions">
             <Button variant="outline" onClick={() => void save(page).catch(onError)}><Download /> Download page</Button>
             {model && <Button variant="ghost" onClick={() => void save(model).catch(onError)}><Download /> Model and citations</Button>}

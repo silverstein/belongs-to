@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from "react";
 import { createRoot } from "react-dom/client";
-import { AlertCircle, ArrowRight, FileStack, FolderOpen, LockKeyhole, Moon, Sun } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowRight, FileStack, FolderOpen, LockKeyhole, Moon, Sun } from "lucide-react";
 import { ClientError } from "eve/client";
 import { openInteractions, type InteractionRequest } from "eve/events";
-import { useEveAgent } from "eve/react";
 import { Streamdown, defaultRehypePlugins } from "streamdown";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import {
   Questionnaire, QuestionnaireActions, QuestionnaireChoice, QuestionnaireChoices,
   QuestionnaireDescription, QuestionnaireError, QuestionnaireInput, QuestionnaireItem, QuestionnaireSubmit, QuestionnaireTitle,
 } from "@/components/ui/questionnaire";
-import { DocumentCards, ReviewTrace, reviewActivity, type DocumentInfo } from "./activity";
+import { DocumentCards, ReviewTrace, reviewActivity, useReviewSession, type DocumentInfo } from "./activity";
 import { ReviewPacket, isPacket } from "./packet";
 import { RecordMark } from "./record-mark";
 import examples from "./generated/examples.json";
@@ -138,22 +137,26 @@ function App() {
   const workspace = useRef<HTMLHeadingElement>(null);
 
   const passwordLocked = passwordRequired && (!password || passwordRejected);
-  const agent = useEveAgent({
-    headers: (): Record<string, string> => {
+  const { store: agent, snapshot: { events, messages, view, session, status } } = useReviewSession(
+    (): Record<string, string> => {
       const current = passwordForRequests.current;
       if (passwordRequired && !current) throw new Error("Enter the family password.");
       return current ? { Authorization: `Basic ${btoa(String.fromCharCode(...new TextEncoder().encode(`family:${current}`)))}` } : {};
     },
-    onError(error) { report(error, true); },
-  });
-  const questions = openInteractions(agent.view).filter((item) => item.request.kind === "question" && item.answer === undefined);
-  const busy = sending || agent.status === "busy" || agent.status === "resuming";
+    (error) => report(error, true),
+  );
+  const questions = openInteractions(view).filter((item) => item.request.kind === "question" && item.answer === undefined);
+  const busy = sending || status === "busy" || status === "resuming";
   const startDisabled = busy || passwordLocked;
-  const activity = useMemo(() => reviewActivity(agent.events), [agent.events]);
-  const packet = agent.messages.flatMap((message) => message.parts.flatMap((part) =>
+  const activity = useMemo(() => reviewActivity(events), [events]);
+  const latestDraft = activity.attempts.at(-1);
+  const streamingDraft = messages.flatMap(({ parts }) => parts).findLast((part) =>
+    part.type === "tool" && part.callId === latestDraft?.id && part.state === "streaming");
+  const inputText = streamingDraft?.type === "tool" ? streamingDraft.inputText : undefined;
+  const packet = messages.flatMap((message) => message.parts.flatMap((part) =>
     part.type === "tool" && part.name === "finish_review" && part.state === "completed" && isPacket(part.output)
       ? [{ key: part.callId, files: part.output.files }] : [])).at(-1);
-  const lastEvent = agent.events.at(-1);
+  const lastEvent = events.at(-1);
   const listening = busy && !questions.length;
 
   useEffect(() => { document.documentElement.dataset.theme = theme; }, [theme]);
@@ -210,7 +213,7 @@ function App() {
         pages: (await file.text()).match(/^#{1,6} (?:Page \d+(?=\s|:|$)|Attached:)/gim)?.length || 1,
       })));
       setDocuments(inventory);
-      await agent.send([{ type: "text", text: requestForFolder }, ...parts], { signal: AbortSignal.timeout(60_000) });
+      await agent.send({ message: [{ type: "text", text: requestForFolder }, ...parts], signal: AbortSignal.timeout(60_000) });
     } catch (error) {
       report(error, true);
     } finally {
@@ -223,7 +226,7 @@ function App() {
     setProblem("");
     setAnswering(true);
     try {
-      await agent.respond([{ interactionId, ...response }]);
+      await agent.send({ answers: [{ interactionId, ...response }] });
     } catch (error) {
       report(error, true);
     } finally {
@@ -232,7 +235,7 @@ function App() {
   }
 
   async function reconnect() {
-    if (passwordLocked || !agent.session) return;
+    if (passwordLocked || !session) return;
     setProblem("");
     setReconnectCount((value) => value + 1);
     try {
@@ -247,7 +250,7 @@ function App() {
     if (startDisabled || questions.length || !draft.trim()) return;
     setProblem("");
     try {
-      await agent.send(draft.trim());
+      await agent.send({ message: draft.trim() });
       setDraft("");
     } catch (error) {
       report(error, true);
@@ -255,7 +258,7 @@ function App() {
   }
 
   const issue = problem || activity.toolFailure || (quiet ? "No new activity for a minute. The review may still be running." : "");
-  const recover = agent.session && (busy || quiet);
+  const recover = session && (busy || quiet);
   return (
     <main className="app">
       <a className="skip" href="#review">Skip to review</a>
@@ -322,11 +325,11 @@ function App() {
         <section className="chat" aria-labelledby="review">
           <header className="chat-header">
             <h2 id="review" ref={workspace} tabIndex={-1}>{folder?.name ?? "Family review"}</h2>
-            {busy && <Button variant="ghost" disabled={passwordLocked || !agent.session}
+            {busy && <Button variant="ghost" disabled={passwordLocked || !session}
               onClick={() => void agent.cancel().catch((error) => report(error, true))}>Stop review</Button>}
           </header>
 
-          <MessageScrollerProvider key={folder?.name ?? "empty"}>
+          <MessageScrollerProvider key={folder?.name ?? "empty"} autoScroll defaultScrollPosition="end">
             <MessageScroller className="chat-scroller">
               <MessageScrollerViewport className="chat-viewport">
                 <MessageScrollerContent className="thread">
@@ -341,7 +344,8 @@ function App() {
                     <DocumentCards documents={documents} activity={activity} />
                   </MessageScrollerItem>}
                   {folder && <MessageScrollerItem>
-                    <ReviewTrace activity={activity} busy={busy} hasQuestion={Boolean(questions.length)} hasPacket={Boolean(packet)} />
+                    <ReviewTrace activity={activity} busy={busy} hasQuestion={Boolean(questions.length)}
+                      hasPacket={Boolean(packet && packet.key === latestDraft?.id)} lastEvent={lastEvent} inputText={inputText} />
                   </MessageScrollerItem>}
                   {questions.map(({ interactionId, request }) => <MessageScrollerItem key={interactionId}>
                     <FamilyQuestion request={request} disabled={answering || passwordLocked}
@@ -351,7 +355,7 @@ function App() {
                     <Marker className="packet-marker"><MarkerContent>Review confirmed</MarkerContent></Marker>
                     <ReviewPacket files={packet.files} theme={theme} onError={report} />
                   </MessageScrollerItem>}
-                  {agent.messages.map((message) => {
+                  {messages.map((message) => {
                     const text = message.parts.filter((part) => part.type === "text" && !part.text.startsWith(requestForFolder) && part.text.trim());
                     if (!text.length) return null;
                     return <MessageScrollerItem key={message.id} messageId={message.id} scrollAnchor={message.role === "user"}>
@@ -372,7 +376,9 @@ function App() {
                   })}
                 </MessageScrollerContent>
               </MessageScrollerViewport>
-              <MessageScrollerButton />
+              <MessageScrollerButton size="sm" behavior="auto" className="activity-jump">
+                <ArrowDown aria-hidden="true" /> New activity
+              </MessageScrollerButton>
             </MessageScroller>
           </MessageScrollerProvider>
           {issue && <div className="recovery" role="alert">
@@ -381,9 +387,9 @@ function App() {
               : folder && <Button variant="outline" disabled={startDisabled} onClick={() => void start(folder.files, folder.name)}>Retry review</Button>}
           </div>}
           {folder && !questions.length && <form className="composer" onSubmit={(event) => void sendText(event)}>
-            <input aria-label="Message" placeholder="Ask about the pages" disabled={startDisabled || !agent.session}
+            <input aria-label="Message" placeholder="Ask about the pages" disabled={startDisabled || !session}
               value={draft} onChange={(event) => setDraft(event.target.value)} />
-            <Button type="submit" disabled={startDisabled || !agent.session || !draft.trim()}>Send</Button>
+            <Button type="submit" disabled={startDisabled || !session || !draft.trim()}>Send</Button>
           </form>}
         </section>
       </div>
