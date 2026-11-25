@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { defineEval } from "eve/evals";
 import { equals } from "eve/evals/expect";
-import { calls, openInteractions } from "eve/events";
+import { calls, openInteractions, type SessionView } from "eve/events";
 import { readFolder } from "../lib/intake.mjs";
 import examples from "../web/generated/examples.json";
 import { evidenceUploadNames } from "./upload-names.mjs";
@@ -17,12 +17,30 @@ const cases = {
 type Files = { files?: Array<{ name: string; gzip: string; embedsFonts: boolean }>; gaps?: string[] };
 type ReviewResult = Files & { errors?: string[] };
 
+const regressions = {
+  beneficiary: {
+    description: "Refuse an invented Roth beneficiary and let the corrected Park draft proceed",
+    request: "Try the invented Roth beneficiary first.",
+  },
+  layout: {
+    description: "Answer the renewed Park review after a layout error",
+    request: "Try the Park draft with overlapping cards first.",
+  },
+};
+
 const scenarios = [
-  ...Object.keys(cases).map((name) => ({ name: name as keyof typeof cases, regression: false })),
-  { name: "park" as const, regression: true },
+  ...Object.keys(cases).map((name) => ({ name: name as keyof typeof cases, regression: undefined })),
+  { name: "park" as const, regression: "beneficiary" as const },
+  { name: "park" as const, regression: "layout" as const },
 ];
 
 const localModule = (path: string) => pathToFileURL(resolve(process.cwd(), path)).href;
+
+function pendingReviewQuestion(view: SessionView) {
+  return openInteractions(view).find(({ answer, call, request }) =>
+    answer === undefined && call?.name === "finish_review" && request.kind === "question"
+      && request.options?.some(({ id }) => id === "show"));
+}
 
 async function gradeFacts(name: keyof typeof cases, raw: ReturnType<typeof JSON.parse>, uploadNames: ReadonlyMap<string, string>) {
   const { deathRoutes }: typeof import("../../kit/derive.mjs") = await import(localModule("../kit/derive.mjs"));
@@ -64,7 +82,7 @@ async function gradeFacts(name: keyof typeof cases, raw: ReturnType<typeof JSON.
 }
 
 export default scenarios.map(({ name, regression }) => defineEval({
-  description: regression ? "Refuse an invented Roth beneficiary and let the corrected Park draft proceed" : `Review the ${name} source folder`,
+  description: regression ? regressions[regression].description : `Review the ${name} source folder`,
   tags: regression ? [name, "fixture"] : [name],
   timeoutMs: regression ? 90_000 : 480_000,
   async test(t) {
@@ -76,29 +94,48 @@ export default scenarios.map(({ name, regression }) => defineEval({
     const session = await t.session();
     try {
       const turn = await session.send([
-        { type: "text", text: `Please review the uploaded documents. Draw whose name things are in, what happens at a death, and a QSBS ledger if the uploads include a sale scenario.${regression ? " Try the invented Roth beneficiary first." : ""}` },
+        { type: "text", text: `Please review the uploaded documents. Draw whose name things are in, what happens at a death, and a QSBS ledger if the uploads include a sale scenario.${regression ? ` ${regressions[regression].request}` : ""}` },
         ...files,
       ]);
       turn.awaitingInput();
-      const interaction = openInteractions(turn.view).find(({ request }) =>
-        request.kind === "question" && request.options?.some((option) => option.id === "show"));
-      t.check(Boolean(interaction), equals(true)).label("Eve paused at the review gate");
-      if (!interaction) {
+      let question = pendingReviewQuestion(turn.view);
+      t.check(Boolean(question), equals(true)).label("Eve paused at the review gate");
+      if (!question) {
         const questions = turn.events.filter((event) => event.type === "interaction.opened");
         t.log(`Review gate missing. Observed question tools: ${questions.map((event) => event.data.origin?.call?.name).filter(Boolean).join(", ") || "none"}.`);
         return;
       }
-      t.check(cases[name].gap.test(interaction.request.prompt), equals(true)).label("The question names a real document gap");
+      t.check(cases[name].gap.test(question.request.prompt), equals(true)).label("The question names a real document gap");
       const completedReviews = calls(turn.view, { name: "finish_review" }).filter((row) => row.outcome === "completed");
       t.check(completedReviews.some((row) => Boolean((row.output as Files | undefined)?.files?.length)), equals(false))
         .label("The packet was unavailable before the answer");
-      if (regression) {
+      if (regression === "beneficiary") {
         t.check(completedReviews.some((row) => (row.output as ReviewResult | undefined)?.errors?.some((error) =>
           error.includes("Cite the beneficiary page for roth"))), equals(true))
           .label("The invented Roth beneficiary was refused before the corrected draft asked for an answer");
       }
 
-      const answered = await session.respond([{ interactionId: interaction.interactionId, optionId: "show" }]);
+      const submitted = new Set<string>();
+      let answered = turn;
+      while (question && !submitted.has(question.interactionId)) {
+        const { interactionId } = question;
+        submitted.add(interactionId);
+        t.log(`Answering review question ${submitted.size} (${interactionId}).`);
+        answered = await session.respond([{ interactionId, optionId: "show" }]);
+        const accepted = session.events.some((event) => event.type === "interaction.settled"
+          && event.data.interactionId === interactionId && event.data.outcome === "accepted"
+          && event.data.response?.optionId === "show");
+        t.check(accepted, equals(true)).label(`Eve accepted review answer ${submitted.size}`);
+        if (!accepted) break;
+        question = pendingReviewQuestion(answered.view);
+      }
+
+      if (regression === "layout") {
+        const reviews = calls(answered.view, { name: "finish_review" });
+        t.check(reviews.some((row) => (row.output as ReviewResult | undefined)?.errors?.some((error) =>
+          error.includes("layout audit FAILED"))), equals(true)).label("The first confirmed draft failed the layout audit");
+        t.check(submitted.size, equals(2)).label("The corrected draft received its own confirmation");
+      }
       answered.succeeded();
       t.calledSkill("belongs-to");
       t.calledTool("read_documents");

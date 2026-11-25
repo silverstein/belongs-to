@@ -96,7 +96,7 @@ Run all three households once the preflight passes.
 npm run eval -- --url http://127.0.0.1:2000 --exclude-tag fixture --max-concurrency 1
 ```
 
-Each eve eval sends one folder, waits for a real eve question, answers it, and inspects the returned files. It checks the model with the kit and verifies page references and a set of known facts against the fictional papers. The kit's layout audit also has to pass before any file leaves the sandbox. Page numbers and the checked examples can catch real errors. A reader with the source in hand still checks whether every statement follows from its cited page.
+Each eve eval sends one folder, answers each review confirmation, and inspects the returned files. It checks the model with the kit and verifies page references and a set of known facts against the fictional papers. The kit's layout audit also has to pass before any file leaves the sandbox. Page numbers and the checked examples can catch real errors. A reader with the source in hand still checks whether every statement follows from its cited page.
 
 To check the same sandbox, question and downloads without a model provider, create the separate fixture target. It supplies fixed model drafts so the test can isolate the rest of the flow.
 
