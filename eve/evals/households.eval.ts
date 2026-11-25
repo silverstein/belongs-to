@@ -34,6 +34,10 @@ const regressions = {
     description: "Return a field error for an Ellery draft missing its death view title",
     request: "Try an Ellery draft with no death view title, then add it.",
   },
+  intake: {
+    description: "Answer Ellery intake before one checked review and packet",
+    request: "Ask the Ellery intake questions before drafting.",
+  },
 };
 
 const scenarios = [
@@ -42,14 +46,20 @@ const scenarios = [
   { name: "park" as const, regression: "layout" as const },
   { name: "park" as const, regression: "facts" as const },
   { name: "ellery" as const, regression: "title" as const },
+  { name: "ellery" as const, regression: "intake" as const },
 ];
 
 const localModule = (path: string) => pathToFileURL(resolve(process.cwd(), path)).href;
+const maxIntakeQuestions = 3;
+
+function pendingQuestion(view: SessionView, tool: string) {
+  return openInteractions(view).find(({ answer, call, request }) =>
+    answer === undefined && call?.name === tool && request.kind === "question");
+}
 
 function pendingReviewQuestion(view: SessionView) {
-  return openInteractions(view).find(({ answer, call, request }) =>
-    answer === undefined && call?.name === "finish_review" && request.kind === "question"
-      && request.options?.some(({ id }) => id === "show"));
+  const question = pendingQuestion(view, "finish_review");
+  return question?.request.options?.some(({ id }) => id === "show") ? question : undefined;
 }
 
 async function gradeFacts(name: keyof typeof cases, raw: ReturnType<typeof JSON.parse>, uploadNames: ReadonlyMap<string, string>) {
@@ -107,6 +117,16 @@ export default scenarios.map(({ name, regression }) => defineEval({
     const start = session.start.bind(session) as
       (message: Parameters<typeof session.send>[0]) => Promise<EveEvalLiveTurn>;
     let inFlight: EveEvalLiveTurn | undefined;
+    const respond = async (interactionId: string, optionId: string, label: string) => {
+      inFlight = await session.startRespond([{ interactionId, optionId }]);
+      const next = await inFlight.result();
+      inFlight = undefined;
+      const accepted = session.events.some((event) => event.type === "interaction.settled"
+        && event.data.interactionId === interactionId && event.data.outcome === "accepted"
+        && event.data.response?.optionId === optionId);
+      t.check(accepted, equals(true)).label(label);
+      return accepted ? next : undefined;
+    };
     try {
       inFlight = await start([
         { type: "text", text: `Please review the uploaded documents. Draw whose name things are in, what happens at a death, and a QSBS ledger if the uploads include a sale scenario.${regression ? ` ${regressions[regression].request}` : ""}` },
@@ -114,8 +134,31 @@ export default scenarios.map(({ name, regression }) => defineEval({
       ]);
       const bytes = Object.values(sources).reduce((total, content) => total + Buffer.byteLength(content), 0);
       t.log(`Eve accepted ${files.length} files (${bytes} bytes before encoding) for ${session.id}.`);
-      const turn = await inFlight.result();
+      let turn = await inFlight.result();
       inFlight = undefined;
+
+      const intakeAnswers = new Map<string, string>();
+      while (!pendingReviewQuestion(turn.view)) {
+        const intake = pendingQuestion(turn.view, "ask_question");
+        if (!intake) break;
+        t.log(`Intake question ${intakeAnswers.size + 1}: ${JSON.stringify(intake.request.prompt)}`);
+        if (intakeAnswers.size === maxIntakeQuestions || intakeAnswers.has(intake.interactionId)) {
+          t.check(false, equals(true)).label("Intake opened the review within three answers and did not repeat a pending question");
+          return;
+        }
+        const options = intake.request.options ?? [];
+        const option = options.find(({ label }) => /\brecommended\b/i.test(label)) ?? options[0];
+        if (!option) {
+          t.check(false, equals(true)).label("The intake question offered a choice the eval could answer");
+          return;
+        }
+        t.log(`Answering intake with ${JSON.stringify(option.label)}.`);
+        const next = await respond(intake.interactionId, option.id, `Eve accepted intake answer ${intakeAnswers.size + 1}`);
+        if (!next) return;
+        intakeAnswers.set(intake.interactionId, option.id);
+        turn = next;
+      }
+
       turn.awaitingInput();
       let question = pendingReviewQuestion(turn.view);
       t.check(Boolean(question), equals(true)).label("Eve paused at the review gate");
@@ -142,38 +185,38 @@ export default scenarios.map(({ name, regression }) => defineEval({
           error.includes("at-a-death needs text in title."))), equals(true))
           .label("The missing title received a field error before the question");
       }
+      if (regression === "intake") {
+        t.check([...intakeAnswers.values()], equals(["Ohio (Recommended)", "Use the uploaded documents"]))
+          .label("Intake chose the recommended option, then the first option when no choice was recommended");
+      }
 
       const submitted = new Set<string>();
       let answered = turn;
-      while (question && !submitted.has(question.interactionId)) {
+      const reviewCount = regression === "facts" ? 2 : 1;
+      while (question && submitted.size < reviewCount && !submitted.has(question.interactionId)) {
         const { interactionId } = question;
         submitted.add(interactionId);
         t.log(`Answering review question ${submitted.size} (${interactionId}).`);
-        inFlight = await session.startRespond([{ interactionId, optionId: "show" }]);
-        answered = await inFlight.result();
-        inFlight = undefined;
-        const accepted = session.events.some((event) => event.type === "interaction.settled"
-          && event.data.interactionId === interactionId && event.data.outcome === "accepted"
-          && event.data.response?.optionId === "show");
-        t.check(accepted, equals(true)).label(`Eve accepted review answer ${submitted.size}`);
-        if (!accepted) break;
+        const next = await respond(interactionId, "show", `Eve accepted review answer ${submitted.size}`);
+        if (!next) return;
+        answered = next;
         question = pendingReviewQuestion(answered.view);
       }
 
+      const reviewQuestions = session.events.filter((event) =>
+        event.type === "interaction.opened" && event.data.origin?.call?.name === "finish_review");
+      t.check(reviewQuestions.length, equals(reviewCount)).label(reviewCount === 1
+        ? "The family saw exactly one review question" : "The changed facts required a new confirmation");
       if (regression === "layout") {
-        t.check(session.events.filter((event) => event.type === "interaction.opened").length, equals(1))
-          .label("The family saw exactly one question");
         t.check(calls(answered.view, { name: "finish_review" }).filter((row) =>
           Boolean((row.output as Files | undefined)?.files?.length)).length, equals(2))
           .label("The checked layout and its layout-only revision both rendered");
       }
-      if (regression === "facts") {
-        t.check(submitted.size, equals(2)).label("The changed facts required a new confirmation");
-      }
       answered.succeeded();
       t.calledSkill("belongs-to");
       t.calledTool("read_documents");
-      const guides = turn.toolCalls.find((call) => call.name === "read_reference")?.output as { model?: string; design?: string } | undefined;
+      const guideCall = calls(turn.view, { name: "read_reference" }).find((call) => call.outcome === "completed");
+      const guides = guideCall?.output as { model?: string; design?: string } | undefined;
       t.check(Boolean(guides?.model?.startsWith("# The household model") && guides.design?.startsWith("# Design rules")
         && !guides.model.includes("examples/")), equals(true)).label("The model and layout guides are available without sample paths");
 

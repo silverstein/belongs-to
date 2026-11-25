@@ -62,3 +62,20 @@ test("a missing death view title returns a draft field error", () => {
   delete draft.views[1].title;
   assert.deepEqual(inspectReview(draft, folder).errors, ["views resolve: at-a-death needs text in title."]);
 });
+
+test("notes use documented names except in a verified quotation", () => {
+  const draft = structuredClone(parkedModel);
+  const note = draft.views[0].notes[0];
+  note.body += " Jordan asks his attorney about a will.";
+  assert.match(inspectReview(draft, folder).errors.join("\n"), /whose-name note A body uses "his"/);
+
+  const file = draft.holdings[0].source.doc;
+  const short = draft.documents[file].short;
+  const pages = new Map(folder.get(file));
+  const quote = "Jordan explained that this was his account.";
+  pages.set(1, `${pages.get(1)}\n${quote}`);
+  const withQuote = new Map(folder).set(file, pages);
+  note.body = `“${quote}” (${short}, p. 1)`;
+  assert.deepEqual(inspectReview(draft, withQuote).errors, []);
+  assert.match(inspectReview(draft, folder).errors.join("\n"), /uses "his"/);
+});

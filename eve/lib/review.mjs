@@ -6,6 +6,7 @@ import { deathRoutes, QSBS_CONDITIONS } from "../../kit/derive.mjs";
 const viewTypes = new Map([["whose-name", "structure"], ["at-a-death", "transfer"], ["qsbs", "structure"]]);
 const id = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 const documentOrUnknown = (source) => Boolean(source?.doc || source?.status === "unknown");
+const personalPronoun = /\b(?:he|him|his|himself|she|her|hers|herself)\b/i;
 
 function stableJson(value) {
   return JSON.stringify(value, (_key, entry) => entry && typeof entry === "object" && !Array.isArray(entry)
@@ -60,6 +61,33 @@ function checkSources(value, folder, documents, location, errors) {
   for (const [key, child] of Object.entries(value)) {
     if (key !== "source") checkSources(child, folder, documents, [...location, key], errors);
   }
+}
+
+function checkReaderCopy(raw, folder, errors) {
+  const plain = (text) => text.replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
+  const readable = new Map(Object.entries(raw.documents)
+    .filter(([, doc]) => doc.read === "read" || doc.read === "partial")
+    .map(([filename, doc]) => [plain(String(doc.short)).toLowerCase(), { doc, pages: folder.get(filename) }]));
+  const check = (text, where) => {
+    if (typeof text !== "string" || !personalPronoun.test(text)) return;
+    const unquoted = plain(text).replace(/"([^"]+)"\s*\(([^,"]+),\s*p\.\s*(\d+)\)/g, (citation, quote, short, pageText) => {
+      const source = readable.get(short.trim().toLowerCase());
+      const page = Number(pageText);
+      const words = source?.pages?.get(page);
+      const readPages = source?.doc.read === "partial" ? pagesCovered(source.doc.readNote) : null;
+      return words && (!readPages || readPages.has(page)) && plain(words).includes(quote) ? "" : citation;
+    });
+    const pronoun = personalPronoun.exec(unquoted)?.[0];
+    if (pronoun) errors.push(`${where} uses "${pronoun}". Use the person's documented name, or quote the exact words with the document short name and page.`);
+  };
+  for (const view of raw.views) {
+    for (const field of ["title", "subtitle", "kicker"]) check(view[field], `${view.id} ${field}`);
+    for (const [index, note] of (view.notes ?? []).entries()) {
+      for (const field of ["title", "body", "fix"]) check(note[field], `${view.id} note ${String.fromCharCode(65 + index)} ${field}`);
+    }
+    for (const [card, fix] of Object.entries(view.fixes ?? {})) check(fix, `${view.id} fix for ${card}`);
+  }
+  for (const { what, todo } of raw.intake?.lookedFor ?? []) check(todo, `What to do for ${what}`);
 }
 
 export function inspectReview(raw, folder) {
@@ -137,6 +165,8 @@ export function inspectReview(raw, folder) {
   const model = normalize(raw);
   const facts = verify(model);
   if (!facts.ok) return { errors: facts.errors };
+  checkReaderCopy(raw, folder, errors);
+  if (errors.length) return { errors };
 
   const todo = [...new Set([...raw.views.flatMap((view) => Object.values(view.fixes ?? {})), ...todosFromIntake(model)])];
   const gaps = new Set();

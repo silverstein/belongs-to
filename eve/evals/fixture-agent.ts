@@ -28,6 +28,26 @@ export default defineAgent({
     const layoutRepairs = input.includes("Try two Park layout errors, then adjust the checked layout.");
     const changedFacts = input.includes("Add the documented vehicle trim after the first Park packet.");
     const missingTitle = input.includes("Try an Ellery draft with no death view title, then add it.");
+    if (input.includes("Ask the Ellery intake questions before drafting.")) {
+      const answers = toolResults.filter((row) => row.name === "ask_question")
+        .map((row) => (row.output as { answer?: string })?.answer);
+      if (!answers.length) return tool("ask_question", {
+        question: "Before I draw this, which state do you live in? Sam's will says Ohio, so I'll use Ohio unless you tell me otherwise.",
+        options: [
+          { label: "Different state", description: "Tell me which one." },
+          { label: "Ohio (Recommended)", description: "Matches Sam's will, page 1." },
+        ],
+      });
+      if (answers[0] !== "Ohio (Recommended)") return "Please tell me which state.";
+      if (answers.length === 1) return tool("ask_question", {
+        question: "Should I use the uploaded documents for this review?",
+        options: [
+          { label: "Use the uploaded documents", description: "Review the folder I sent." },
+          { label: "Wait for more documents", description: "Stop the review for now." },
+        ],
+      });
+      if (answers[1] !== "Use the uploaded documents") return "Send the rest of the folder when you have it.";
+    }
     const reviews = toolResults.filter((row) => row.name === "finish_review");
     const result = reviews.at(-1);
     if (result) {
