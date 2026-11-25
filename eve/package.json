@@ -11,6 +11,7 @@
     "dev:agent": "node scripts/stage.mjs && eve dev",
     "build": "node scripts/stage.mjs && vite build",
     "build:eve": "node scripts/stage.mjs && eve build",
+    "check:hosted": "node scripts/check-hosted.mjs",
     "eval": "node scripts/stage.mjs && eve eval"
   },
   "dependencies": {

@@ -1,13 +1,5 @@
-import { defineSandbox } from "eve/sandbox";
-import { DockerSandbox } from "eve/sandbox/docker";
-import { VercelSandbox } from "eve/sandbox/vercel";
+import { DefaultSandbox, defineSandbox } from "eve/sandbox";
 
-const hosted = process.env.VERCEL === "1";
-const vercel = VercelSandbox.environment();
-const docker = DockerSandbox.environment();
+export const environment = DefaultSandbox.environment();
 
-export const environment = hosted ? vercel : docker;
-
-export default defineSandbox(() => hosted
-  ? vercel.open({ networkPolicy: "deny-all" })
-  : docker.open({ networkPolicy: "deny-all" }));
+export default defineSandbox(() => environment.open({ networkPolicy: "deny-all" }));

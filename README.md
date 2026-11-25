@@ -89,6 +89,8 @@ If the host runs out of file watchers, use the compiled agent with the same chat
 
 ### Check the examples
 
+From `eve/`, run `npm run check:hosted` to compile the agent for Vercel and check that the generated web function returns ready from `/eve/v1/health`. The check uses a temporary build and skips sandbox prewarming, so it needs no Vercel credentials.
+
 For a live preflight, start the compiled agent on port 2000 as above and run just the Park case from `eve/`.
 
 ```sh
