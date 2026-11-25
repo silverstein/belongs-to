@@ -1,12 +1,14 @@
 import "./stage.mjs";
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { evidenceUploadNames } from "../evals/upload-names.mjs";
 
 const app = fileURLToPath(new URL("../", import.meta.url));
 const target = join(app, ".eve-fixture");
 mkdirSync(target, { recursive: true });
 cpSync(join(app, "agent"), join(target, "agent"), { recursive: true });
+rmSync(join(target, "agent/tools/read_file.ts"), { force: true });
 cpSync(join(app, "evals/fixture-agent.ts"), join(target, "agent/agent.ts"));
 writeFileSync(join(target, "package.json"), JSON.stringify({ name: "belongs-to-eve", private: true, type: "module", dependencies: { eve: "1.5.0", zod: "^4.3.0" } }));
 
@@ -16,9 +18,14 @@ const specialPages = {
   park: { "08-vehicle-title-and-value.md:attachment": 2 },
 };
 
-function prepareFixture(name) {
+function prepareFixture(name, anonymize) {
   const model = JSON.parse(readFileSync(join(app, "..", "examples", name, "household.json"), "utf8"));
-  const filename = (doc) => name === "park" ? doc : `${doc}.md`;
+  const originalFilename = (doc) => name === "park" ? doc : `${doc}.md`;
+  const aliases = evidenceUploadNames(readdirSync(join(app, "..", "examples", name, "documents")).filter((filename) => filename.endsWith(".md")));
+  const filename = (doc) => {
+    const original = originalFilename(doc);
+    return anonymize ? aliases.get(original) ?? original : original;
+  };
   const documents = Object.entries(model.documents);
   for (const [doc, data] of documents) {
     if (["trust", "will-sam", "idgt", "ada-trust", "theo-trust"].includes(doc)) data.signed = "signed";
@@ -63,5 +70,8 @@ function prepareFixture(name) {
   return model;
 }
 
-const fixtures = Object.fromEntries(["ellery", "okafor", "park"].map((name) => [name, prepareFixture(name)]));
+const fixtures = Object.fromEntries(["ellery", "okafor", "park"].map((name) => [name, {
+  named: prepareFixture(name, false),
+  numbered: prepareFixture(name, true),
+}]));
 writeFileSync(join(target, "agent", "fixture-models.json"), JSON.stringify(fixtures));

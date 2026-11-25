@@ -8,13 +8,21 @@ export default defineAgent({
   defaultTools: false,
   model: mockModel(({ messages, lastUserMessage, toolResults }) => {
     const tool = (name: string, input: object) => ({ toolCalls: [{ name, input }] });
+    const read = toolResults.find((row) => row.name === "read_documents");
+    if (!read) return tool("read_documents", {});
+    const documents = (read.output as { documents?: Record<string, unknown> })?.documents;
+    if (!documents || !Object.keys(documents).length) return "Please send the documents.";
     if (!toolResults.some((row) => row.name === "eve__skill")) return tool("eve__skill", { name: "belongs-to" });
-    const reads = toolResults.filter((row) => row.name === "read_documents");
-    if (!reads.length) return tool("read_documents", { filenames: [] });
-    const listing = reads[0].output;
-    if (!Array.isArray(listing) || !listing.length) return "Please send the example documents.";
-    const filenames = listing.map(({ name }) => name);
-    if (reads.length === 1) return tool("read_documents", { filenames });
+    if (!toolResults.some((row) => row.name === "read_reference")) return tool("read_reference", { topics: ["model", "design"] });
+
+    const filenames = Object.keys(documents);
+    const variant = filenames.every((name) => /^document-\d+\.md$/.test(name)) ? "numbered" : "named";
+    const family = Object.keys(fixtures).find((name) => {
+      const expected = Object.keys(fixtures[name][variant].documents);
+      return expected.length === filenames.length && expected.every((name) => Object.hasOwn(documents, name));
+    });
+    if (!family) return "Please send one of the fictional folders.";
+    const model = fixtures[family][variant];
     const input = lastUserMessage ?? messages.map((message) => message.text).join("\n");
     const regression = input.includes("Try the invented Roth beneficiary first.");
     const reviews = toolResults.filter((row) => row.name === "finish_review");
@@ -22,18 +30,16 @@ export default defineAgent({
     if (result) {
       const output = result.output as { waitingForDocuments?: boolean; errors?: string[] };
       if (output?.errors) {
-        if (regression && reviews.length === 1) return tool("finish_review", { modelJson: JSON.stringify(fixtures.park) });
+        if (regression && reviews.length === 1) return tool("finish_review", { modelJson: JSON.stringify(model) });
         return `The example could not be checked. ${output.errors.join(" ")}`;
       }
       return output?.waitingForDocuments ? "Start again with the complete folder." : "The pages are ready. Start with the gap in the paperwork.";
     }
     if (regression) {
-      const draft = structuredClone(fixtures.park);
+      const draft = structuredClone(model);
       draft.assets.roth.designation = { primary: [{ to: "mia", share: 1 }], source: { status: "assumed" } };
       return tool("finish_review", { modelJson: JSON.stringify(draft) });
     }
-    const family = Object.keys(fixtures).find((name) => new RegExp(name, "i").test(input))
-      ?? (filenames.includes("birch-oa.md") ? "ellery" : filenames.includes("captable.md") ? "okafor" : "park");
-    return tool("finish_review", { modelJson: JSON.stringify(fixtures[family]) });
+    return tool("finish_review", { modelJson: JSON.stringify(model) });
   }),
 });

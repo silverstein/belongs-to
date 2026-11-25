@@ -16,7 +16,8 @@ mkdirSync(skill, { recursive: true });
 mkdirSync(generated, { recursive: true });
 mkdirSync(publicFiles, { recursive: true });
 cpSync(join(root, "kit"), join(workspace, "kit"), { recursive: true });
-cpSync(join(root, "SKILL.md"), join(skill, "SKILL.md"));
+const skillSource = readFileSync(join(root, "SKILL.md"), "utf8");
+writeFileSync(join(skill, "SKILL.md"), skillSource.replace(/<!-- standalone:start -->[\s\S]*?<!-- standalone:end -->\n*/g, ""));
 cpSync(join(root, "references"), join(skill, "references"), { recursive: true });
 cpSync(join(root, "scripts/build.mjs"), join(workspace, "scripts/build.mjs"));
 for (const filename of ["intake.mjs", "review.mjs", "run-review.mjs"]) {

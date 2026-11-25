@@ -1,13 +1,14 @@
 ---
 name: belongs-to
-description: Draw who owns what, and where it goes when something happens, from a household's or founder's own documents. Builds source-cited, self-checking HTML figures of entity and trust structures, cap tables, "what happens when someone dies" transfer maps, and QSBS (§1202) exclusion ledgers. Every box cites the document and page it came from; anything the documents don't show is drawn as a gap, never guessed. Use whenever someone wants to see their estate plan, trust funding, LLCs, holding company, family office structure, beneficiary designations, probate exposure, founder stock, QSBS stacking or cap table as a picture, or asks "what's in my trust", "what happens if I die", "whose name is this in", "draw my structure", even if they never say diagram. The kit makes no network calls and has no server; documents go only to the model the agent already uses.
+description: Draw who owns what, and where it goes when something happens, from a household's or founder's own documents. Builds source-cited, self-checking HTML figures of entity and trust structures, cap tables, "what happens when someone dies" transfer maps, and QSBS (§1202) exclusion ledgers. Every box cites the document and page it came from; anything the documents don't show is drawn as a gap, never guessed. Use whenever someone wants to see their estate plan, trust funding, LLCs, holding company, family office structure, beneficiary designations, probate exposure, founder stock, QSBS stacking or cap table as a picture, or asks "what's in my trust", "what happens if I die", "whose name is this in", "draw my structure", even if they never say diagram.
 ---
 
 # belongs-to
 
 This skill turns a family's documents into figures that answer one question each: **who owns what, and where does it go when something happens.** A figure is a picture of what the documents say, not legal or tax advice, and the skill never drafts the document that would fix a problem. The page's footer says this; the conversation doesn't open with it.
 
-Three example households ship with the skill. Open the closest one before you start, and build it once to see the bar:
+<!-- standalone:start -->
+Three example households ship with the standalone kit. When learning the kit in its source checkout, build the closest one to see the bar:
 
 ```
 node scripts/build.mjs examples/ellery/household.json   # trust funding + what happens at a death
@@ -18,6 +19,8 @@ node scripts/build.mjs examples/park/household.json     # a 401(k), a Roth, a ho
 - `examples/ellery/`: Fig. 2, a structure view with a "held by the trust" zone and a gap arrow for the one LLC never assigned to it. Fig. 3, a transfer view of the same model: each asset's line stays in its mechanism's band (form, title, trust, probate), and only the court band looks like a detour.
 - `examples/okafor/`: Fig. 1, taxpayer zones over a cap table, a per-taxpayer QSBS ledger, and an eligibility checklist where each § 1202 condition is cited or marked assumed.
 - `examples/park/`: an everyday household with a 401(k), a Roth IRA, a joint house and no will, built by a fresh agent from the ten synthetic documents in `examples/park/documents/` using only this skill. Read it to see how statements and titles become citations, and how "no will" and "beneficiary: none on file" are modeled.
+
+<!-- standalone:end -->
 
 ## The one idea that matters
 
@@ -46,7 +49,7 @@ Everything on a page is read by someone the figure is about, usually at a bad mo
 - **Handing over the page:** lead with the one thing to look at. "Here's the page. Start with the red card on the right: the rental LLC never got moved into the trust, and that's the one that matters. The other two are forms." The page carries the detail; the message carries the one thing. Never "both audits passed."
 - **When asked to write the document:** "I can't write the assignment; that's your attorney's job, and a wrong one causes real harm. I can give them this page so they know exactly what to write."
 - **When corrected:** "Thanks, that changes things. With the assignment on file, Birch is inside the trust and nothing goes to court. Here's the page again." Update the model, rebuild, say what changed.
-- **Privacy, the first time:** "Your documents are seen by the assistant you're already talking to, and by nothing else. If you'd rather, give me a copy with names and account numbers blacked out first, and check that my citations land on the right pages." Draw what you were given; don't go looking for more.
+- **Privacy, the first time:** Explain who handles the papers and where the current setup keeps them. The family can send redacted copies and check the citations against their own papers.
 - **On the page:** a card says "Jordan's, and no one is named to get it," not "designation: none." A band says "Goes to court first," not "By will, through probate court." The footer says "What we looked at," "What's missing" and "How we double-checked." The fix line says what to do, in the family's words.
 - **What you never say:** "not modeled," "this figure does not compute," "the build," "the model," "the audit," "entity," or any sentence that reports the tool's effort instead of the family's situation.
 
@@ -57,7 +60,7 @@ Everything on a page is read by someone the figure is about, usually at a bad mo
    - "What happens if X dies?" → `transfer` view on a `death` event.
    - "What does a sale do for QSBS?" → `structure` view with a `qsbs` ledger on a `sale` event.
    Most households want a structure view first and one event view second, both built from the same model.
-2. **Read the documents where they are.** Read the family's files with your own tools. The kit's scripts make no network calls and there is no belongs-to server, but what you read goes to the assistant they are talking to, so say so plainly the first time (the privacy sentence above). Never upload them anywhere else, never paste them into a web service, and don't keep copies outside the folder the family chose. If a document is a scan you can't read, say so in the family's words and record it as unreadable.
+2. **Read the documents where they are.** Use the intake tool or file access your setup provides. Keep the papers within the disclosed setup and draw from the documents the family provided. If a document is a scan you can't read, say so in the family's words and record it as unreadable.
 3. **Write down what you have and what you went looking for, before you model anything.** Every document the family sent gets a line in `documents` with how it was read: in full, in part (say which pages), couldn't read it, or mentioned but never sent. For a trust, a will, a certification, a power of attorney or a health care directive, also say whether the copy is signed (`signed`); open the signature pages before you say so, and the footer prints it beside the document. If two copies of the same agreement were sent, diff them page by page before saying what either shows, and say in the intake which pages differ. A citation into a document read in part must land on a page the `readNote` lists; the build refuses the rest. Then list in `intake.lookedFor` what a careful review would want and whether each was found, missing or unreadable: both wills, powers of attorney, a beneficiary form for every account, the transfer clause in each operating agreement, the custodial agreement a statement points to. The page's "What's missing" list comes straight from this record. If you didn't log the search, you can't say it's missing, and you can't cite a page you never opened; the build enforces both.
 4. **Write the model** (`household.json`, see `references/model.md`). Record parties, assets and holdings, each with `source: { doc, at }`. Use the exact page, article, section or schedule. Then add `jurisdiction`, each relevant person's `marital` status, and the events.
    - When the documents don't say: `source: { status: "unknown", note }`.
@@ -79,12 +82,17 @@ Everything on a page is read by someone the figure is about, usually at a bad mo
      - Plain (`info`) is for something worth knowing that is probably by design, such as a grantor trust that shares the grantor's QSBS cap.
      - Amber (`ask`) is for what the documents don't show, with the one question that would settle it.
      - Red reads as "mistake" to the family, so don't use it for a deliberate planning choice.
-7. **Build and fix to zero.** Run `node scripts/build.mjs path/to/household.json`. It runs the facts audit and the layout audit and writes nothing until both pass. Read every failing line and fix the model or the placement, never the check. `--force` writes the pages anyway so you can look.
+7. **Build and fix to zero.** Submit the draft through the review tool if your setup provides one. Use the findings to fix the facts or the placement before sharing the pages.
+
+<!-- standalone:start -->
+   In a source checkout, run `node scripts/build.mjs path/to/household.json`. It runs the facts audit and the layout audit and writes nothing until both pass. Read every failing line and fix the model or the placement, never the check. `--force` writes the pages anyway so you can look.
 8. **Look like a critic.**
    - Run `node scripts/shoot.mjs out/<view>.html` for light, then `--theme dark` and `--width 390` (which checks the stacked layout). The script exits 1 on overflowing or colliding text and prints it. `out/<view>.html#focus=<id>` checks a deep link.
    - Read every PNG. Zoom with `--zoom x,y,w,h` on each junction, chip and note.
    - Ask: does the title answer the question in five seconds? Does the drawing imply anything the text doesn't? For example, a line that seems to pass through probate, or a red box on a deliberate choice. Read every reader-facing string aloud as the spouse of the person it is about.
 9. **Optional cold read.** For anything public, show the PNGs to fresh reviewers with no context: an owner like the subject, someone outside the target, and a skeptical attorney or CPA. Ask what each figure says and what is wrong. Fix what they name. The examples went through this loop.
+
+<!-- standalone:end -->
 
 ## What this skill does not do
 
@@ -93,6 +101,7 @@ Everything on a page is read by someone the figure is about, usually at a bad mo
 - It doesn't decide what a document means when the document is ambiguous. Record the assumption and tell the family what you assumed and what would settle it.
 - The rules it encodes are general US rules at the level of mechanism. `references/law.md` lists exactly what is covered and what is not (community property, state probate variations, trust splits at first death, and so on). When the family's situation is outside that, say so in a note, in the family's words: what the rule is where they live and who should look at it.
 
+<!-- standalone:start -->
 ## Files
 
 | Path | What it is |
@@ -112,3 +121,4 @@ Everything on a page is read by someone the figure is about, usually at a bad mo
 | `scripts/measure-fonts.mjs` | Re-measures font metrics after a font change. |
 
 Requirements: Node 22 or newer, no npm install, and Chrome or Chromium for screenshots only.
+<!-- standalone:end -->

@@ -1,6 +1,6 @@
 # The household model
 
-One JSON file per household. The figures are views of it, so a fact is written once and every figure that shows it agrees. Read `examples/ellery/household.json` and `examples/okafor/household.json` alongside this page.
+One JSON file per household. The figures are views of it, so a fact is written once and every figure that shows it agrees.
 
 ## Sources
 
@@ -20,7 +20,7 @@ Cite a legal conclusion (grantor-trust status, disregarded-entity status, C-corp
 ```json
 {
   "kind": "belongs-to/household@1",
-  "household": "The Ellerys",
+  "household": "A household",
   "asOf": "2026-10-11",
   "synthetic": true,
   "jurisdiction": { "state": "Ohio", "communityProperty": false, "label": "Ohio, not a community-property state", "source": { … } },

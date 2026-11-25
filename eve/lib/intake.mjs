@@ -38,11 +38,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   try {
     const files = readFolder(".eve/attachments");
     const names = JSON.parse(readFileSync(0, "utf8"));
-    const result = names.length
-      ? Object.fromEntries(names.map((name) => [name, Object.fromEntries(files.get(name) ?? [])]))
-      : [...files].map(([name, pages]) => ({ name, pages: [...pages.keys()] }));
-    const json = JSON.stringify(result);
-    if (Buffer.byteLength(json) > 96 * 1024) throw new Error("Read fewer documents in one call.");
+    const inventory = [...files].map(([name, pages]) => ({ name, pages: [...pages.keys()] }));
+    const bundle = (requested) => Object.fromEntries(requested.map((name) => [name, Object.fromEntries(files.get(name) ?? [])]));
+    const limit = 96 * 1024;
+    let json;
+    if (names === null) {
+      json = JSON.stringify({ documents: bundle([...files.keys()]) });
+      if (Buffer.byteLength(json) > limit) json = JSON.stringify({ inventory });
+    } else {
+      json = JSON.stringify(names.length ? bundle(names) : inventory);
+    }
+    if (Buffer.byteLength(json) > limit) throw new Error("Read fewer documents in one call.");
     console.log(json);
   } catch (error) {
     console.log(JSON.stringify({ error: error.code === "ENOENT" ? "Send a folder of text documents first." : error.message }));
