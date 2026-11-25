@@ -83,7 +83,9 @@ export default defineAgent({
       if (output?.waitingForDocuments && input.includes("Proceed with the same Park folder.")) {
         return tool("finish_review", { modelJson: JSON.stringify(model) });
       }
-      return output?.waitingForDocuments ? "Start again with the complete folder." : "The pages are ready. Start with the gap in the paperwork.";
+      if (output?.waitingForDocuments) return "Start again with the complete folder.";
+      if (family === "ellery") return "The **ownership and death pages** are ready. The papers show Birch Avenue LLC in Sam’s name and leave Dana’s IRA beneficiary open. Open the pages above for the citations and next steps.";
+      return "The pages are ready. Start with the gap in the paperwork.";
     }
     if (inventedBeneficiary) {
       const draft = structuredClone(model);

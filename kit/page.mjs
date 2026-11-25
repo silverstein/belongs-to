@@ -1,42 +1,24 @@
 // The plate: a figure with its title, notes, sources and verification
 // receipt, as one self-contained HTML page (fonts embedded, no network).
+import { readFileSync } from "node:fs";
 import { fontFaceCss, FAMILIES } from "./fonts.mjs";
 import { esc, listJoin } from "./text.mjs";
+import { markHtml } from "./record-marks.mjs";
 import { citeLabel, missingFromIntake, todosFromIntake, footerMissing, noteTargets } from "./model.mjs";
 
+export const foundationCss = readFileSync(new URL("./foundation.css", import.meta.url), "utf8");
+
 export const CSS = `
+${foundationCss}
 :root{
-  --bt-paper:#F4F1EA; --bt-card:#FFFDF8; --bt-plate:#FBF9F4;
-  --bt-ink:#1C1B19; --bt-ink-2:#4B4842; --bt-ink-3:#736E66; --bt-ink-4:#B3ADA2;
-  --bt-rule:#D9D3C6; --bt-rule-2:#E8E3D8; --bt-line:#5E5A52;
-  --bt-ok:#2C6A4D; --bt-ok-wash:#E9F1EA; --bt-ok-line:#A9C9B4;
-  --bt-flag:#B5431D; --bt-flag-wash:#FBEDE5; --bt-flag-line:#E7B39C;
-  --bt-ask:#93650C; --bt-ask-wash:#F8F0DC; --bt-ask-line:#E2C98F;
-  --bt-info:#3E5873; --bt-info-wash:#E9EEF4;
-  --bt-shadow:0 1px 0 rgba(28,27,25,.04), 0 10px 30px -18px rgba(28,27,25,.25);
-  color-scheme:light;
-}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bt-paper:#121211; --bt-card:#1C1B19; --bt-plate:#171715;
-  --bt-ink:#EFEADF; --bt-ink-2:#C2BCB0; --bt-ink-3:#8F897E; --bt-ink-4:#5F5A52;
-  --bt-rule:#34312C; --bt-rule-2:#2A2824; --bt-line:#ABA598;
-  --bt-ok:#86C6A1; --bt-ok-wash:rgba(134,198,161,.075); --bt-ok-line:rgba(134,198,161,.38);
-  --bt-flag:#F2936B; --bt-flag-wash:rgba(242,147,107,.10); --bt-flag-line:rgba(242,147,107,.55);
-  --bt-ask:#E4B860; --bt-ask-wash:rgba(228,184,96,.10); --bt-ask-line:rgba(228,184,96,.5);
-  --bt-info:#9FB8D6; --bt-info-wash:rgba(159,184,214,.10);
-  --bt-shadow:0 1px 0 rgba(0,0,0,.3), 0 14px 34px -20px rgba(0,0,0,.8);
-  color-scheme:dark;
-}}
-:root[data-theme="dark"]{
-  --bt-paper:#121211; --bt-card:#1C1B19; --bt-plate:#171715;
-  --bt-ink:#EFEADF; --bt-ink-2:#C2BCB0; --bt-ink-3:#8F897E; --bt-ink-4:#5F5A52;
-  --bt-rule:#34312C; --bt-rule-2:#2A2824; --bt-line:#ABA598;
-  --bt-ok:#86C6A1; --bt-ok-wash:rgba(134,198,161,.075); --bt-ok-line:rgba(134,198,161,.38);
-  --bt-flag:#F2936B; --bt-flag-wash:rgba(242,147,107,.10); --bt-flag-line:rgba(242,147,107,.55);
-  --bt-ask:#E4B860; --bt-ask-wash:rgba(228,184,96,.10); --bt-ask-line:rgba(228,184,96,.5);
-  --bt-info:#9FB8D6; --bt-info-wash:rgba(159,184,214,.10);
-  --bt-shadow:0 1px 0 rgba(0,0,0,.3), 0 14px 34px -20px rgba(0,0,0,.8);
-  color-scheme:dark;
+  --bt-paper:var(--paper); --bt-card:var(--sheet); --bt-plate:var(--sheet);
+  --bt-ink:var(--ink); --bt-ink-2:var(--ink-2); --bt-ink-3:var(--ink-3); --bt-ink-4:var(--ink-4);
+  --bt-rule:var(--line); --bt-rule-2:var(--line-2); --bt-line:var(--ink-3);
+  --bt-ok:var(--green); --bt-ok-wash:var(--green-wash); --bt-ok-line:var(--green-2);
+  --bt-flag:var(--rust); --bt-flag-wash:var(--rust-wash); --bt-flag-line:color-mix(in srgb,var(--rust) 45%,var(--sheet));
+  --bt-ask:var(--amber-ink); --bt-ask-wash:var(--amber-wash); --bt-ask-line:color-mix(in srgb,var(--amber) 45%,var(--sheet));
+  --bt-info:var(--blue); --bt-info-wash:color-mix(in srgb,var(--blue) 13%,var(--sheet));
+  --bt-shadow:none;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bt-paper);color:var(--bt-ink)}
@@ -75,6 +57,10 @@ body{font-family:${FAMILIES.sans};-webkit-font-smoothing:antialiased;text-render
 .bt-sources{margin:0;padding:0;list-style:none;columns:2 260px;column-gap:28px;font:400 12.5px/1.45 ${FAMILIES.sans};color:var(--bt-ink-2)}
 .bt-sources li{break-inside:avoid;margin:0 0 6px;padding-left:0}
 .bt-sources b{font:500 11.5px/1 ${FAMILIES.mono};color:var(--bt-ink);margin-right:6px}
+.record-mark{display:inline-block;vertical-align:-.15em;margin-right:5px;color:var(--ink-2)}
+.record-mark[data-kind=confirmed]{color:var(--green)}
+.record-mark[data-kind=found]{color:var(--amber-ink)}
+.bt-record-key{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 17px;border-top:1px solid var(--bt-rule);padding-top:10px;font:400 12px/1.45 ${FAMILIES.sans};color:var(--bt-ink-3)}
 .bt-sources i{font-style:normal;color:var(--bt-ask)}
 .bt-receipt{margin:0;padding:0;list-style:none;font:400 12.5px/1.45 ${FAMILIES.sans};color:var(--bt-ink-2)}
 .bt-receipt li{display:flex;gap:8px;margin:0 0 5px}
@@ -310,9 +296,10 @@ ${CSS}</style>
   ${notes.length ? `<section class="bt-notes" aria-label="Notes">${notes.map((n) => `<div class="bt-note ${esc(n.tone)}" data-on="${esc(noteTargets(n).join(" "))}"><h3><span class="bt-letter ${esc(n.tone)}">${esc(n.letter)}</span><span>${esc(n.title)}</span></h3><p>${esc(n.body)}</p></div>`).join("")}</section>` : ""}
   ${todos.length ? `<section class="bt-todo" aria-label="What to do"><h4>What to do</h4><ol>${todos.map((t) => `<li>${esc(t)}</li>`).join("")}</ol></section>` : ""}
   <footer class="bt-foot${missing.length ? " bt-has-missing" : ""}">
-    <div><h4>What we looked at</h4><ul class="bt-sources">${docs.map((d) => `<li><b>${esc(d.short)}</b>${esc(d.title)}${d.date && !d.title.includes(d.date.slice(0, 4)) ? `, ${esc(d.date.slice(0, 4))}` : ""}${d.read === "partial" ? ` <i>(${esc(d.readNote ?? "read in part")})</i>` : ""}${d.signed === "unsigned" ? ` <i>(copy unsigned)</i>` : d.signed === "unknown" ? ` <i>(signature pages not in the copy)</i>` : ""}</li>`).join("")}</ul></div>
-    ${missing.length ? `<div class="bt-missing"><h4>We looked for these and couldn’t find them</h4><ul class="bt-sources">${missing.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></div>` : ""}
+    <div><h4>What we looked at</h4><ul class="bt-sources">${docs.map((d) => `<li>${markHtml("found")}<b>${esc(d.short)}</b>${esc(d.title)}${d.date && !d.title.includes(d.date.slice(0, 4)) ? `, ${esc(d.date.slice(0, 4))}` : ""}${d.read === "partial" ? ` <i>(${esc(d.readNote ?? "read in part")})</i>` : ""}${d.signed === "unsigned" ? ` <i>(copy unsigned)</i>` : d.signed === "unknown" ? ` <i>(signature pages not in the copy)</i>` : ""}</li>`).join("")}</ul></div>
+    ${missing.length ? `<div class="bt-missing"><h4>We looked for these and couldn’t find them</h4><ul class="bt-sources">${missing.map((d) => `<li>${markHtml("missing")}${esc(d)}</li>`).join("")}</ul></div>` : ""}
     <div><h4>How we double-checked</h4><ul class="bt-receipt">${receipt.map((r) => `<li class="${r.open ? "open" : ""}">${esc(r.text)}</li>`).join("")}</ul></div>
+    <div class="bt-record-key" aria-label="Record mark key"><span>${markHtml("found")}Read in the documents</span>${missing.length ? `<span>${markHtml("missing")}Missing</span>` : ""}</div>
     ${view.law ? `<p class="bt-law"><b>The rules behind this</b> ${esc(view.law)}</p>` : ""}
     <p class="bt-disclaimer"><span>This shows what your documents say. It isn’t legal or tax advice. The form fixes you can do yourself; for a will or a trust, an attorney should look at this first.</span><span class="bt-mark">${esc(readerNote)}</span></p>
   </footer>

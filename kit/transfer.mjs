@@ -43,6 +43,7 @@ export function renderTransfer(model, view, { noteBadges, geometryOnly = false }
   const recipX = stationX + stationW + gutter;
   const width = recipX + recipW + M;
   const headH = 52, bandHead = 40, rowH = 60, rowGap = 12, bandGap = 14, bandPadB = 14;
+  const stationLineStep = 17;
   // The sentence under each item may need two lines, and a name that can't
   // sit beside its value wraps and pushes the value to its own line; the row
   // grows with both. Nothing is ever cut to "AI…".
@@ -56,7 +57,12 @@ export function renderTransfer(model, view, { noteBadges, geometryOnly = false }
     else { row.nameLines = wrap(node.name, "name", assetW - 52 - badgeW, 2); row.valueOwn = true; }
     row.holdLines = wrap(holdLine(model, event, row), "detail", assetW - 52, 2);
     row.textTop = (row.nameLines.length - 1) * 18 + (row.valueOwn ? 17 : 0);
-    row.h = rowH + row.textTop + (row.holdLines.length - 1) * 16;
+    const court = ROUTES[row.route].court;
+    row.stationLines = wrap(row.detail, "detail", stationW - (court ? 46 : 28), 3);
+    row.stationHeight = court
+      ? 46 + (row.stationLines.length - 1) * stationLineStep
+      : Math.max(34, 14 + row.stationLines.length * stationLineStep);
+    row.h = Math.max(rowH + row.textTop + (row.holdLines.length - 1) * 16, row.stationHeight);
   }
 
   // Bands in mechanism order, rows inside them in authored order.
@@ -183,16 +189,16 @@ export function renderTransfer(model, view, { noteBadges, geometryOnly = false }
     out?.push(`</g>`);
     boxes.push({ id: row.id, x: M, y, w: assetW, h: row.h });
 
-    const lines = wrap(row.detail, "detail", stationW - (court ? 46 : 28), 3);
-    const sh = court ? row.h : Math.max(34, 14 + lines.length * 16);
+    const lines = row.stationLines;
+    const sh = court ? row.h : row.stationHeight;
     const sy = y + row.h / 2 - sh / 2;
     out?.push(`<g class="bt-station${court ? " bt-station-court" : ""}" data-station="${esc(row.id)}"><rect x="${stationX}" y="${sy}" width="${stationW}" height="${sh}" rx="${court ? 9 : sh / 2}"/>`);
     if (court) {
       out?.push(icon("clock", stationX + 12, sy + 11, 15, "bt-icon bt-icon-flag"));
       out?.push(`<text class="bt-station-title" x="${stationX + 34}" y="${sy + 23}">Court first</text>`);
-      lines.forEach((line, k) => out?.push(`<text class="bt-station-text" x="${stationX + 34}" y="${sy + 39 + k * 14.5}">${esc(line)}</text>`));
+      lines.forEach((line, k) => out?.push(`<text class="bt-station-text" x="${stationX + 34}" y="${sy + 39 + k * stationLineStep}">${esc(line)}</text>`));
     } else {
-      lines.forEach((line, k) => out?.push(`<text class="bt-station-text" x="${stationX + stationW / 2}" y="${sy + sh / 2 + 4.5 - (lines.length - 1) * 8 + k * 16}" text-anchor="middle">${esc(line)}</text>`));
+      lines.forEach((line, k) => out?.push(`<text class="bt-station-text" x="${stationX + stationW / 2}" y="${sy + sh / 2 + 4.5 + (k - (lines.length - 1) / 2) * stationLineStep}" text-anchor="middle">${esc(line)}</text>`));
     }
     out?.push(`</g>`);
     boxes.push({ id: `station-${row.id}`, x: stationX, y: sy, w: stationW, h: sh, station: true });

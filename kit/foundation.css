@@ -1,0 +1,58 @@
+:root {
+  --paper: light-dark(#f5f2ec, #141715);
+  --sheet: light-dark(#fffefb, #1b1f1d);
+  --damp: light-dark(#efebe4, #101211);
+  --ink: light-dark(#1d2321, #ece8df);
+  --ink-2: light-dark(#4a524e, #bdb8ae);
+  --ink-3: light-dark(#666b67, #9a968d);
+  --ink-4: light-dark(#b4b7b2, #55544f);
+  --line: light-dark(#e3ded5, #2e3330);
+  --line-2: light-dark(#ece8e1, #262a28);
+  --control: light-dark(#858a86, #74736d);
+  --green: light-dark(#2f5e4f, #86b8a4);
+  --green-2: light-dark(#5e8577, #5f8f7d);
+  --green-wash: light-dark(#e5ede8, #1d2b25);
+  --amber: light-dark(#a66c12, #d6a456);
+  --amber-ink: light-dark(#875608, #d6a456);
+  --amber-wash: light-dark(#f6eddb, #2f2617);
+  --rust: light-dark(#a2432c, #e3917a);
+  --rust-wash: light-dark(#f5e5df, #33211c);
+  --blue: light-dark(#4e7590, #8fb1c9);
+  --gold: light-dark(#bf923e, #dbb261);
+  --on-ink: light-dark(#fffefb, #141715);
+  --serif: "BT Newsreader", Georgia, serif;
+  --sans: "Geist Sans", system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+  color-scheme: light dark;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+@media print {
+  :root, :root[data-theme] {
+    --paper: #fff;
+    --sheet: #fff;
+    --damp: #f4f2ee;
+    --ink: #1d2321;
+    --ink-2: #4a524e;
+    --ink-3: #666b67;
+    --ink-4: #b4b7b2;
+    --line: #d9d4ca;
+    --line-2: #ece8e1;
+    --control: #858a86;
+    --green: #2f5e4f;
+    --green-2: #5e8577;
+    --green-wash: #e5ede8;
+    --amber: #a66c12;
+    --amber-ink: #875608;
+    --amber-wash: #f6eddb;
+    --rust: #a2432c;
+    --rust-wash: #f5e5df;
+    --blue: #4e7590;
+    --gold: #bf923e;
+    --on-ink: #fff;
+    color-scheme: light;
+  }
+}

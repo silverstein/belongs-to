@@ -19,10 +19,11 @@ export function renderTransferStacked(model, view, { noteBadges, geometryOnly = 
 
   const W = 420, M = 14, cardW = 282, gutterX = M + cardW + 14; // lanes live from gutterX to W - M - 6
   const bandHead = 46, baseRowH = 84, rowGap = 10, bandGap = 12, bandPadB = 12;
+  const lineStep = 15;
   const stationLinesOf = (row) => wrap(ROUTES[row.route].court ? `Court first. ${row.detail}` : row.detail, "laneSub", cardW - 54, 3);
   const fixLinesOf = (row) => (view.fixes?.[row.id] ? wrap(view.fixes[row.id], "laneSub", cardW - 40, 3) : []);
   const holdLinesOf = (row) => wrap(holdLine(model, event, row), "detail", cardW - 42, 2);
-  const rowHOf = (row) => baseRowH + (stationLinesOf(row).length - 1) * 13 + (holdLinesOf(row).length - 1) * 13;
+  const rowHOf = (row) => baseRowH + (stationLinesOf(row).length - 1 + holdLinesOf(row).length - 1) * lineStep;
   const fixHOf = (row) => (fixLinesOf(row).length ? 16 + fixLinesOf(row).length * 15 : 0);
   const recipients = (view.recipients ?? []).map((id) => ({ id, node: model.nodes[id], flows: [] }));
 
@@ -134,7 +135,7 @@ export function renderTransferStacked(model, view, { noteBadges, geometryOnly = 
     const { y: ry0, item: node } = row;
     const badges = noteBadges.get(row.id) ?? [];
     const court = ROUTES[row.route].court;
-    const holdLines = holdLinesOf(row), dh = (holdLines.length - 1) * 13;
+    const holdLines = holdLinesOf(row), dh = (holdLines.length - 1) * lineStep;
     out?.push(`<g class="bt-node" data-id="${esc(row.id)}" tabindex="0" role="group" aria-label="${esc(node.name)}">`);
     const rowH = row.h;
     out?.push(`<rect class="bt-card bt-asset${court ? " bt-t-flag" : ""}" x="${M}" y="${ry0}" width="${cardW}" height="${rowH}" rx="9"/>`);
@@ -146,14 +147,14 @@ export function renderTransferStacked(model, view, { noteBadges, geometryOnly = 
     const name = measure(node.name, "nameSm") <= nameMax ? node.name : shortName(node);
     out?.push(`<text class="bt-name bt-name-sm" x="${M + 31}" y="${ry0 + 22}">${esc(wrap(name, "nameSm", nameMax, 1)[0])}</text>`);
     out?.push(`<text class="bt-value${row.value == null ? " bt-tone-ask" : ""}" x="${M + cardW - 10 - badgeW}" y="${ry0 + 22}" text-anchor="end" style="font-size:12.5px">${esc(valueText)}</text>`);
-    holdLines.forEach((line, k) => out?.push(`<text class="bt-detail${court ? " bt-tone-flag" : ""}" x="${M + 31}" y="${ry0 + 40 + k * 13}" style="font-size:11.5px">${esc(line)}</text>`));
+    holdLines.forEach((line, k) => out?.push(`<text class="bt-detail${court ? " bt-tone-flag" : ""}" x="${M + 31}" y="${ry0 + 40 + k * lineStep}" style="font-size:11.5px">${esc(line)}</text>`));
     // Station, as a pill inside the card.
     const sLines = stationLinesOf(row);
     const sw = Math.min(cardW - 22, Math.max(...sLines.map((l) => measure(l, "laneSub"))) + 30);
-    const sh = 24 + (sLines.length - 1) * 13;
+    const sh = 24 + (sLines.length - 1) * lineStep;
     out?.push(`<g class="bt-station${court ? " bt-station-court" : ""}" data-station="${esc(row.id)}"><rect x="${M + 11}" y="${ry0 + 50 + dh}" width="${sw}" height="${sh}" rx="12"/>`);
     out?.push(icon(court ? "clock" : "form", M + 19, ry0 + 55 + dh, 12, `bt-icon${court ? " bt-icon-flag" : ""}`));
-    sLines.forEach((line, k) => out?.push(`<text class="bt-station-text${court ? " bt-tone-flag" : ""}" x="${M + 35}" y="${ry0 + 66 + dh + k * 13}" style="font-size:11px">${esc(line)}</text>`));
+    sLines.forEach((line, k) => out?.push(`<text class="bt-station-text${court ? " bt-tone-flag" : ""}" x="${M + 35}" y="${ry0 + 66 + dh + k * lineStep}" style="font-size:11px">${esc(line)}</text>`));
     out?.push(`</g>`);
     badges.forEach((badge, k) => { const cx = M + cardW - 3 - k * 21, cy = ry0 + 3; out?.push(`<g class="bt-badge bt-tone-${badge.tone}"><circle cx="${cx}" cy="${cy}" r="8.5"/><text x="${cx}" y="${cy + 3.4}" text-anchor="middle" style="font-size:10px">${badge.letter}</text></g>`); });
     out?.push(`</g>`);

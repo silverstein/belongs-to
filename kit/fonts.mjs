@@ -9,15 +9,14 @@ const here = join(dirname(fileURLToPath(import.meta.url)), "fonts");
 
 export const FAMILIES = {
   serif: "'BT Newsreader', Georgia, 'Times New Roman', serif",
-  sans: "'BT Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif",
-  mono: "'BT Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace",
+  sans: "'Geist Sans', system-ui, -apple-system, 'Segoe UI', sans-serif",
+  mono: "'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace",
 };
 
 const FACES = [
   { family: "BT Newsreader", file: "Newsreader.woff2", weight: "300 800", opsz: true },
-  { family: "BT Plex Sans", file: "IBMPlexSans.woff2", weight: "100 700" },
-  { family: "BT Plex Mono", file: "IBMPlexMono-400.woff2", weight: "400" },
-  { family: "BT Plex Mono", file: "IBMPlexMono-500.woff2", weight: "500" },
+  { family: "Geist Sans", file: "GeistSans.woff2", weight: "100 900" },
+  { family: "Geist Mono", file: "GeistMono.woff2", weight: "100 900" },
 ];
 
 export function fontFaceCss() {

@@ -13,11 +13,11 @@ for (let code = 32; code < 127; code++) chars.push(String.fromCharCode(code));
 chars.push(..."’‘“”–—·§×é…→←↓↑•≈½¼¾%");
 
 const styles = [
-  { key: "sans-400", font: "400 SIZEpx 'BT Plex Sans'" },
-  { key: "sans-500", font: "500 SIZEpx 'BT Plex Sans'" },
-  { key: "sans-600", font: "600 SIZEpx 'BT Plex Sans'" },
-  { key: "mono-400", font: "400 SIZEpx 'BT Plex Mono'" },
-  { key: "mono-500", font: "500 SIZEpx 'BT Plex Mono'" },
+  { key: "sans-400", font: "400 SIZEpx 'Geist Sans'" },
+  { key: "sans-500", font: "500 SIZEpx 'Geist Sans'" },
+  { key: "sans-600", font: "600 SIZEpx 'Geist Sans'" },
+  { key: "mono-400", font: "400 SIZEpx 'Geist Mono'" },
+  { key: "mono-500", font: "500 SIZEpx 'Geist Mono'" },
   { key: "serif-400", font: "400 SIZEpx 'BT Newsreader'" },
   { key: "serif-500", font: "500 SIZEpx 'BT Newsreader'" },
 ];
@@ -27,9 +27,9 @@ const dir = mkdtempSync(join(tmpdir(), "bt-measure-"));
 const page = join(dir, "measure.html");
 // Probe elements make the browser load every face before measuring.
 writeFileSync(page, `<!doctype html><meta charset="utf-8"><style>${fontFaceCss()}
-body{font-optical-sizing:auto}</style>
-<span style="font:400 20px 'BT Plex Sans'">a</span><span style="font:600 20px 'BT Plex Sans'">a</span>
-<span style="font:400 20px 'BT Plex Mono'">a</span><span style="font:500 20px 'BT Plex Mono'">a</span>
+body{font-optical-sizing:auto;font-variant-numeric:tabular-nums}</style>
+<span style="font:400 20px 'Geist Sans'">a</span><span style="font:600 20px 'Geist Sans'">a</span>
+<span style="font:400 20px 'Geist Mono'">a</span><span style="font:500 20px 'Geist Mono'">a</span>
 <span style="font:400 20px 'BT Newsreader'">a</span>`);
 
 const browser = await launch();

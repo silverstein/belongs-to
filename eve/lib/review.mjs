@@ -65,22 +65,45 @@ function namesNobody(page, tier) {
     || page.split("\n").some((line) => new RegExp(`^\\s*(?:[-*]\\s*)?no ${tier === "contingent" ? "contingent " : "(?:primary )?"}beneficiar(?:y|ies) (?:named|on file|designated)\\b`, "i").test(line));
 }
 
-function checkPageFacts(value, source, pages, nodes, location, label, errors) {
+function pageCheck(audit, errors, kind, problem) {
+  audit[kind].checked++;
+  if (problem) {
+    audit[kind].failed++;
+    errors.push(problem);
+  }
+}
+
+function addEvidence(evidence, text, { doc, at }) {
+  if (evidence.length < 30 && !evidence.some((item) => item.text === text && item.doc === doc && item.at === at)) {
+    evidence.push({ text, doc, at });
+  }
+}
+
+function checkPageFacts(value, source, pages, nodes, location, label, errors, audit, evidence) {
   const numbers = pageNumbers(pages.join("\n"));
   const equity = Number.isFinite(value.gross) && Number.isFinite(value.loan)
     && Math.abs(value.gross - value.loan - value.usd) < 0.005;
   const explained = /\b(?:derived|estimated)\s+(?:by|from|using|as|at)\b/i.test(source.note ?? "");
   for (const field of dollarFields) {
     const amount = value[field];
-    if (typeof amount !== "number" || numbers.has(amount)) continue;
-    if (field === "usd" && (equity || (explained && numbers.size > 0))) continue;
-    errors.push(`${label}.${field} gives $${amount}, which does not appear on ${source.doc}, ${source.at}. Cite the page with the amount or explain the calculation or estimate.`);
+    if (typeof amount !== "number") continue;
+    if (numbers.has(amount)) {
+      pageCheck(audit, errors, "dollars");
+      addEvidence(evidence, new Intl.NumberFormat("en-US", {
+        style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 4,
+      }).format(amount), source);
+    } else if (field !== "usd" || (!equity && !(explained && numbers.size > 0))) {
+      pageCheck(audit, errors, "dollars", `${label}.${field} gives $${amount}, which does not appear on ${source.doc}, ${source.at}. Cite the page with the amount or explain the calculation or estimate.`);
+    }
   }
 
   const checkName = (target, role, allowedPages = pages) => {
     const name = nodes[target]?.name;
     if (!name || !allowedPages.some((page) => includesName(page, name))) {
-      errors.push(`${label} needs a cited page naming ${name ?? target} as ${role} in ${source.doc}, ${source.at}.`);
+      pageCheck(audit, errors, "names", `${label} needs a cited page naming ${name ?? target} as ${role} in ${source.doc}, ${source.at}.`);
+    } else {
+      pageCheck(audit, errors, "names");
+      addEvidence(evidence, name, source);
     }
   };
   if (location[0] === "holdings" && location.length === 2) {
@@ -99,11 +122,11 @@ function checkPageFacts(value, source, pages, nodes, location, label, errors) {
   if (location.at(-1) === "successorOwner" && value.to) checkName(value.to, "the successor owner");
 }
 
-function checkSources(value, folder, documents, nodes, location, errors) {
+function checkSources(value, folder, documents, nodes, location, errors, audit, evidence) {
   if (!value || typeof value !== "object") return;
   const label = ["Household", ...location].join(".");
   if (dollarFields.some((field) => typeof value[field] === "number") && !value.source?.doc) {
-    errors.push(`${label} gives a dollar amount without a cited page. Cite the source or leave the amount open.`);
+    pageCheck(audit, errors, "dollars", `${label} gives a dollar amount without a cited page. Cite the source or leave the amount open.`);
   }
   if (value.source) {
     const { doc, at, status } = value.source;
@@ -119,16 +142,17 @@ function checkSources(value, folder, documents, nodes, location, errors) {
       if ((status && !saleScenario) || !pages || !cited.length
           || ["unreadable", "not-provided"].includes(document?.read)
           || cited.some((page) => !pages.has(page) || (covered && !covered.has(page)))) {
-        errors.push(`${label} needs a page that exists in ${String(doc)} and was read. List each page, for example "p. 1 and p. 2".`);
+        pageCheck(audit, errors, "citations", `${label} needs a page that exists in ${String(doc)} and was read. List each page, for example "p. 1 and p. 2".`);
       } else {
-        checkPageFacts(value, value.source, cited.map((page) => pages.get(page)), nodes, location, label, errors);
+        pageCheck(audit, errors, "citations");
+        checkPageFacts(value, value.source, cited.map((page) => pages.get(page)), nodes, location, label, errors, audit, evidence);
       }
     } else if (status !== "unknown" && !eligibilityAssumption) {
-      errors.push(`${label} needs a document page or must stay open. A sample sale needs the page with its terms.`);
+      pageCheck(audit, errors, "citations", `${label} needs a document page or must stay open. A sample sale needs the page with its terms.`);
     }
   }
   for (const [key, child] of Object.entries(value)) {
-    if (key !== "source") checkSources(child, folder, documents, nodes, [...location, key], errors);
+    if (key !== "source") checkSources(child, folder, documents, nodes, [...location, key], errors, audit, evidence);
   }
 }
 
@@ -201,7 +225,14 @@ export function inspectReview(raw, folder) {
     if (!id.test(name) || ["__proto__", "constructor", "prototype"].includes(name)) errors.push("Use simple IDs for people, property and events.");
   }
   if (errors.length) return { errors };
-  checkSources(raw, folder, raw.documents, { ...raw.parties, ...raw.assets }, [], errors);
+  const audit = {
+    citations: { checked: 0, failed: 0 },
+    dollars: { checked: 0, failed: 0 },
+    names: { checked: 0, failed: 0 },
+  };
+  const evidence = [];
+  checkSources(raw, folder, raw.documents, { ...raw.parties, ...raw.assets }, [], errors, audit, evidence);
+  const activity = { audit, evidence };
 
   const viewIds = new Set();
   for (const view of raw.views) {
@@ -249,13 +280,13 @@ export function inspectReview(raw, folder) {
   for (const holding of raw.holdings) {
     if (!holding.source?.doc) errors.push(`The holding for ${holding.held} needs its title or ownership page.`);
   }
-  if (errors.length) return { errors };
+  if (errors.length) return { errors, activity: { ...activity, facts: "skipped" } };
 
   const model = normalize(raw);
   const facts = verify(model);
-  if (!facts.ok) return { errors: facts.errors };
+  if (!facts.ok) return { errors: facts.errors, activity: { ...activity, facts: "failed" } };
   checkReaderCopy(raw, folder, errors);
-  if (errors.length) return { errors };
+  if (errors.length) return { errors, activity: { ...activity, facts: "failed" } };
 
   const todo = [...new Set([...raw.views.flatMap((view) => Object.values(view.fixes ?? {})), ...todosFromIntake(model)])];
   const gaps = new Set();
@@ -278,5 +309,6 @@ export function inspectReview(raw, folder) {
   for (const item of raw.intake?.lookedFor ?? []) {
     if (item.result !== "found") gaps.add(item.what);
   }
-  return { errors, gapList: [...gaps], todo, checks: facts.checks.map(({ name, passed }) => ({ name, passed })) };
+  return { errors, gapList: [...gaps], todo, checks: facts.checks.map(({ name, passed }) => ({ name, passed })),
+    activity: { ...activity, facts: "passed" } };
 }

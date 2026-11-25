@@ -10,7 +10,15 @@ type Review = {
 };
 
 type Answer = "show";
-type Inspected = Review & { confirmationKey?: string; priorAnswer?: Answer };
+type CheckResult = "passed" | "failed" | "skipped";
+type AuditActivity = {
+  audit?: Record<"citations" | "dollars" | "names", { checked: number; failed: number }>;
+  evidence?: Array<{ text: string; doc: string; at: string }>;
+  facts: CheckResult;
+  layout: CheckResult;
+};
+type Inspected = Review & { confirmationKey?: string; priorAnswer?: Answer; activity?: AuditActivity };
+type ReviewProgress = { reviewActivity: { stage: "checking" | "rendering" } | { stage: "checked"; result: AuditActivity } };
 
 async function reviewStep(
   ctx: WorkflowStepToolContext,
@@ -38,12 +46,23 @@ async function reviewStep(
 export default defineWorkflowTool({
   description: "Check the facts and layout of a household JSON draft. Repair any reported errors. Ask the family about a checked draft and draw its pages after they confirm.",
   inputSchema: z.object({ modelJson: z.string().min(2).max(96 * 1024) }),
-  async execute({ modelJson }, ctx): Promise<Review> {
+  async *execute({ modelJson }, ctx): AsyncGenerator<ReviewProgress, Review> {
     "use workflow";
+    yield { reviewActivity: { stage: "checking" } };
     const inspected = await reviewStep(ctx, { modelJson });
+    if (inspected.activity) {
+      const evidence = inspected.activity.evidence ?? [];
+      for (let count = 6; count < evidence.length; count += 6) {
+        yield { reviewActivity: { stage: "checked", result: { ...inspected.activity, evidence: evidence.slice(0, count) } } };
+      }
+      yield { reviewActivity: { stage: "checked", result: inspected.activity } };
+    }
     if (!inspected.confirmationKey) return { errors: inspected.errors ?? ["Could not check the draft."] };
     const { confirmationKey, priorAnswer } = inspected;
-    if (priorAnswer === "show") return reviewStep(ctx, { confirmationKey });
+    if (priorAnswer === "show") {
+      yield { reviewActivity: { stage: "rendering" } };
+      return reviewStep(ctx, { confirmationKey });
+    }
 
     const gaps = inspected.gapList ?? [];
     const pending = gaps.slice(0, 8).map((gap) => `• ${gap}`).join("\n");
@@ -61,9 +80,10 @@ export default defineWorkflowTool({
     if (answer.status !== "answered" || answer.optionId !== "show") {
       return { waitingForDocuments: true };
     }
+    yield { reviewActivity: { stage: "rendering" } };
     return reviewStep(ctx, { confirmationKey, answer: answer.optionId });
   },
   toModelOutput(output) {
-    return toolOutput.json(output.files ? { files: output.files.map((file) => file.name) } : output);
+    return toolOutput.json("files" in output && output.files ? { files: output.files.map((file) => file.name) } : output);
   },
 });

@@ -72,8 +72,8 @@ Your own Vercel project runs the chat and sandbox. Document text stays in eve’
 
 1. Use the button to create a Vercel project from the full repository. The button selects `eve` as Root Directory, `npm ci` for install, and `npm run build` for build. Use Node.js 24.x and keep the build output setting at its default so the Eve Vite plugin can assemble the web app and agent service. [Vercel Deploy Button build settings](https://vercel.com/docs/deploy-button/build-settings)
 2. Keep **Include source files outside of the Root Directory in the Build Step** enabled under **Build and Deployment**. Vercel enables it by default on new projects. The install step in `eve` reads the kit, examples, and references from the same repository. Enable the setting before building if reusing a project where it was turned off. [Vercel monorepo settings](https://vercel.com/docs/monorepos/monorepo-faq#can-i-share-source-files-between-projects-are-shared-packages-supported)
-3. Set `BELONGS_TO_PASSWORD` to a long, unique password. This shared password has no attempt limit, and everyone with it shares the deployment's account. Enable Vercel Sandbox and AI Gateway for the project. The project can authenticate Gateway requests with Vercel credentials. Set `BELONGS_TO_MODEL` to choose another Gateway model.
-4. Open the app, enter the password, and choose Ellery, Okafor, or Park. At the review question, choose **Show the pages** to leave the gaps visible. If you choose **I have another document**, you can start with the complete folder or ask to continue this review and choose **Show the pages**.
+3. Set `BELONGS_TO_PASSWORD` to a long, unique password. This shared password has no attempt limit, and everyone with it shares the deployment's account. Vercel supplies project credentials for Sandbox and AI Gateway on hosted deployments. Eve prepares the Sandbox snapshot during the build. Set `BELONGS_TO_MODEL` to choose another Gateway model.
+4. Open the app and enter the family password to enable the example buttons and folder picker. At the review question, choose **Show the pages** to leave the gaps visible. If you choose **I have another document**, you can start with the complete folder or ask to continue this review and choose **Show the pages**.
 
 For local development, use Node 24 and a running Docker engine. Set `AI_GATEWAY_API_KEY` in your shell for a live model, then run:
 
@@ -105,6 +105,8 @@ npm run eval -- --url http://127.0.0.1:2000 --exclude-tag fixture --max-concurre
 
 Each eve eval sends one folder, answers the review confirmation, and inspects the returned files. It checks literal evidence on cited pages and verifies specific known facts against the fictional papers. Both audits pass before the family is asked, and pages are drawn after confirmation. Layout edits reuse the answer when the facts, gaps and wording stay the same. Changing a headline, note or task asks the family to confirm again.
 
+The chat shows which documents were read, which checks passed, and what the agent had to repair. After confirmation, the pages open inline. Each page can also be expanded or saved as an offline HTML file.
+
 Set `BELONGS_TO_PACKET_DIR` to an absolute directory when running the eval to save its downloadable files under the session and review call IDs. To recover files from a saved Eve case, run `node scripts/export-packet.mjs <eval-case.json> <output-directory>` from `eve/`. The saved HTML includes its fonts and opens offline.
 
 To check the same sandbox, question and downloads without a model provider, create the separate fixture target. It supplies fixed model drafts so the test can isolate the rest of the flow.
@@ -117,6 +119,8 @@ node scripts/fixture-target.mjs
 ```
 
 With the fixture server running, use `npm run eval -- --url http://127.0.0.1:4289 --max-concurrency 1` from `eve/` in another terminal. The fixtures cover a missing title, intake answers, bad names and amounts on real pages, layout repairs, renewed confirmation after a headline or fact changes, and choosing to proceed after asking to add a document. The live eval measures whether the model extracts the expected facts and returns a checked packet. From the repository root, run `eve/node_modules/.bin/tsc -p eve` after `npm ci` in `eve/`.
+
+The Chrome sign in check takes two loopback Vite URLs. Point the first at a compiled fixture started with `BELONGS_TO_PASSWORD=round10-fictional-fixture` and point the second at a fixture started with `EVE_DEV=1` and an empty password. Set the same password setting on each Vite process. Run `node scripts/check-browser-auth.mjs <protected-url> <local-url>` from `eve/` with Playwright available. You can set `BELONGS_TO_PLAYWRIGHT` to a local Playwright module path.
 
 ## Export and share
 
@@ -132,4 +136,4 @@ It is a picture of what the documents say. It is not legal or tax advice, and an
 
 ## License
 
-MIT for the code. The fonts (Newsreader and IBM Plex) are under the SIL Open Font License 1.1, in `kit/fonts/`.
+MIT for the code. The fonts (Newsreader, Geist Sans and Geist Mono) are under the SIL Open Font License 1.1, in `kit/fonts/`.

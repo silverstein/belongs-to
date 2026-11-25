@@ -31,7 +31,6 @@ export async function launch({ width = 1440, height = 1000, scale = 2 } = {}) {
   const profile = mkdtempSync(join(tmpdir(), "belongs-to-chrome-"));
   const proc = spawn(chromePath(), [
     "--headless=new",
-    "--no-sandbox",
     "--disable-gpu",
     "--hide-scrollbars",
     "--no-first-run",
