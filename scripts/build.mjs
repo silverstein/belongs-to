@@ -29,7 +29,9 @@ console.log(`facts audit: ${facts.ok ? "passed" : "FAILED"}`);
 for (const c of facts.checks) console.log(`  ${c.passed ? "ok " : "!! "} ${c.name}${c.passed ? "" : `\n      ${c.problems.join("\n      ")}`}`);
 if (facts.open.length) console.log(`  open facts shown on the page: ${facts.open.length}\n      ${facts.open.map((o) => `${o.status}: ${o.where}`).join("\n      ")}`);
 
-mkdirSync(outDir, { recursive: true });
+if (!facts.ok && !force) process.exit(1);
+
+const pages = [];
 const citedDocs = documentsLookedAt(model);
 let failed = !facts.ok;
 
@@ -102,9 +104,15 @@ for (const view of model.views) {
   // The layout audit gates the build; it is a maker's check, not a reader's, so it stays out of the page.
   if (!layout.ok) failed = true;
 
-  const html = pageHtml({ model, view, figureSvg: rendered.svg, figureWidth: rendered.width, stackedSvg: stacked?.svg ?? null, extraSections, notes, legend, receipt, sourcesUsed: citedDocs });
+  const html = pageHtml({ model, view, figureSvg: rendered.svg, figureWidth: rendered.width, stackedSvg: stacked?.svg ?? null, extraSections, notes, legend, receipt, sourcesUsed: citedDocs,
+    readerNote: args.includes("--eve") ? "Your deployment and the model it calls through Vercel AI Gateway handle these documents." : undefined });
   const file = join(outDir, `${view.id}.html`);
-  if (failed && !force) continue;
+  pages.push({ file, html });
+}
+
+if (failed && !force) process.exit(1);
+mkdirSync(outDir, { recursive: true });
+for (const { file, html } of pages) {
   writeFileSync(file, html);
   console.log(`  wrote ${file} (${(html.length / 1024).toFixed(0)} KB)`);
 }

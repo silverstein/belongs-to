@@ -122,13 +122,14 @@ export function renderTransfer(model, view, { noteBadges }) {
   // Bands.
   for (const band of bands) {
     const court = band.route === "probate";
+    const gap = band.route === "unknown";
     const text = BAND_TEXT[band.route];
     const bandW = stationX + stationW + 18 - (M - 12);
-    out.push(`<g class="bt-bandg" data-band="${band.route}"><rect class="bt-band${court ? " bt-band-court" : ""}" x="${M - 12}" y="${band.y}" width="${bandW}" height="${band.h}" rx="14"/>`);
-    out.push(icon(text.icon, M, band.y + 12, 15, `bt-icon${court ? " bt-icon-flag" : ""}`));
-    out.push(`<text class="bt-bandhead${court ? " bt-tone-flag" : ""}" x="${M + 22}" y="${band.y + 23.5}">${esc(text.title.toUpperCase())}</text>`);
+    out.push(`<g class="bt-bandg" data-band="${band.route}"><rect class="bt-band${court ? " bt-band-court" : gap ? " bt-band-gap" : ""}" x="${M - 12}" y="${band.y}" width="${bandW}" height="${band.h}" rx="14"/>`);
+    out.push(icon(text.icon, M, band.y + 12, 15, `bt-icon${court || gap ? " bt-icon-flag" : ""}`));
+    out.push(`<text class="bt-bandhead${court || gap ? " bt-tone-flag" : ""}" x="${M + 22}" y="${band.y + 23.5}">${esc(text.title.toUpperCase())}</text>`);
     const subX = M + 22 + measure(text.title, "lane") + 14;
-    out.push(`<text class="bt-bandsub${court ? " bt-tone-flag" : ""}" x="${subX}" y="${band.y + 23.5}">${esc(text.sub)}</text></g>`);
+    out.push(`<text class="bt-bandsub${court || gap ? " bt-tone-flag" : ""}" x="${subX}" y="${band.y + 23.5}">${esc(text.sub)}</text></g>`);
   }
 
   // Flows (under cards and stations).

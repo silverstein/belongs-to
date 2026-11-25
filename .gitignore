@@ -1,3 +1,13 @@
 examples/*/out/
 shots/
 node_modules/
+eve/.eve/
+eve/.vercel/
+eve/dist/
+eve/agent/sandbox/workspace/
+eve/agent/skills/belongs-to/
+eve/web/generated/
+eve/.env*
+eve/.eve-fixture/
+eve/.output/
+eve/public/belongs-to-fonts.css

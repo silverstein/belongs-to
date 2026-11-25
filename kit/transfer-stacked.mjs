@@ -94,11 +94,12 @@ export function renderTransferStacked(model, view, { noteBadges }) {
   // Bands.
   for (const band of bands) {
     const court = band.route === "probate";
+    const gap = band.route === "unknown";
     const text = BAND_TEXT[band.route];
-    out.push(`<g class="bt-bandg" data-band="${band.route}"><rect class="bt-band${court ? " bt-band-court" : ""}" x="${M - 6}" y="${band.y}" width="${cardW + 12}" height="${band.h}" rx="12"/>`);
-    out.push(icon(text.icon, M + 4, band.y + 10, 13, `bt-icon${court ? " bt-icon-flag" : ""}`));
-    out.push(`<text class="bt-bandhead${court ? " bt-tone-flag" : ""}" x="${M + 22}" y="${band.y + 20}">${esc(text.title.toUpperCase())}</text>`);
-    band.subLines.forEach((line, k) => out.push(`<text class="bt-bandsub${court ? " bt-tone-flag" : ""}" x="${M + 4}" y="${band.y + 36 + k * 15}">${esc(line)}</text>`));
+    out.push(`<g class="bt-bandg" data-band="${band.route}"><rect class="bt-band${court ? " bt-band-court" : gap ? " bt-band-gap" : ""}" x="${M - 6}" y="${band.y}" width="${cardW + 12}" height="${band.h}" rx="12"/>`);
+    out.push(icon(text.icon, M + 4, band.y + 10, 13, `bt-icon${court || gap ? " bt-icon-flag" : ""}`));
+    out.push(`<text class="bt-bandhead${court || gap ? " bt-tone-flag" : ""}" x="${M + 22}" y="${band.y + 20}">${esc(text.title.toUpperCase())}</text>`);
+    band.subLines.forEach((line, k) => out.push(`<text class="bt-bandsub${court || gap ? " bt-tone-flag" : ""}" x="${M + 4}" y="${band.y + 36 + k * 15}">${esc(line)}</text>`));
     out.push(`</g>`);
   }
 

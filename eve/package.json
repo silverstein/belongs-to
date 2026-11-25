@@ -1,0 +1,30 @@
+{
+  "name": "belongs-to-eve",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "postinstall": "node scripts/stage.mjs",
+    "dev": "node scripts/stage.mjs && vite",
+    "dev:agent": "node scripts/stage.mjs && eve dev",
+    "build": "node scripts/stage.mjs && vite build",
+    "build:eve": "node scripts/stage.mjs && eve build",
+    "eval": "node scripts/stage.mjs && eve eval"
+  },
+  "dependencies": {
+    "eve": "1.5.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "typescript": "^6.0.0",
+    "vite": "^8.3.0"
+  }
+}

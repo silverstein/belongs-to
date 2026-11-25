@@ -1,0 +1,51 @@
+:root { font: 16px/1.55 "BT Plex Sans", system-ui, sans-serif; color: #223229; background: #f6f3ea; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 1230px; margin: auto; padding: 0 44px 48px; }
+.masthead { padding: 22px 0; border-bottom: 1px solid #cbcbbd; }
+.masthead a { color: inherit; text-decoration: none; font: 600 31px/1 "BT Newsreader", Georgia, serif; }
+.masthead span { color: #607465; font-style: italic; }
+.columns { display: grid; grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.45fr); gap: clamp(35px, 7vw, 90px); padding-top: 52px; align-items: start; }
+h1 { font: 500 clamp(44px, 6vw, 68px)/0.99 "BT Newsreader", Georgia, serif; letter-spacing: -0.043em; margin: 0 0 22px; }
+h2, h3 { font-size: 17px; margin: 0 0 10px; }
+p { margin: 0 0 12px; }
+aside > p { max-width: 34ch; }
+button, input { font: inherit; }
+button, .upload { cursor: pointer; padding: 8px 13px; border: 1px solid #b5bfb3; border-radius: 5px; color: inherit; background: #fffdf7; }
+button:disabled, .upload[aria-disabled=true] { opacity: .45; cursor: default; }
+button:hover:not(:disabled) { background: #edf1e8; }
+:focus-visible { outline: 2px solid #3d694b; outline-offset: 3px; }
+.drop { display: grid; justify-items: start; gap: 10px; padding: 16px; margin: 24px 0; border: 1px dashed #9aab9b; border-radius: 8px; background: #edf0e8; }
+.drop.active { border-color: #235039; background: #d9e6d8; }
+.upload { display: inline-flex; align-items: center; position: relative; background: #284e39; color: white; border-color: #284e39; }
+.upload input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.upload:focus-within { outline: 2px solid #3d694b; outline-offset: 3px; }
+.options { display: flex; flex-wrap: wrap; gap: 8px; }
+details { margin-top: 23px; }
+details input { display: block; width: 100%; padding: 6px 8px; }
+summary { cursor: pointer; }
+.privacy, .empty, .working { color: #58655a; }
+.privacy { font-size: 13px; margin-top: 17px; }
+.chat { border: 1px solid #d3d5c9; border-radius: 11px; background: #fffef9; overflow: hidden; }
+.chatHeader, .composer { display: flex; gap: 12px; align-items: center; padding: 15px 20px; background: #f8f9f2; }
+.chatHeader { justify-content: space-between; border-bottom: 1px solid #dfe3d9; }
+.chatHeader h2 { margin: 0; }
+.thread { min-height: 310px; padding: 19px 20px; overflow-wrap: anywhere; }
+.message p, .question p { white-space: pre-wrap; }
+.message:empty { display: none; }
+.message.user { padding: 11px 12px; background: #edf0e8; border-radius: 6px; margin: 0 0 18px; }
+.message.user p:last-child, .message.assistant p:last-child { margin-bottom: 0; }
+.message.assistant { margin: 0 0 18px; }
+.message small { display: inline-block; margin: 2px 8px 0 0; }
+.question, .downloads { border: 1px solid #b7c5b7; padding: 12px 15px; border-radius: 6px; margin: 12px 0; }
+legend { padding: 0 6px; font-weight: 600; }
+.downloads button { display: flex; width: 100%; justify-content: space-between; text-align: left; margin-top: 7px; }
+.composer { border-top: 1px solid #dfe3d9; }
+.composer input { width: 100%; min-width: 0; padding: 8px 11px; border: 1px solid #b5bfb3; background: #fffef9; border-radius: 5px; }
+.error { color: #922f23; }
+@media (max-width: 740px) {
+  main { padding: 0 20px 30px; }
+  .columns { grid-template-columns: 1fr; gap: 24px; padding-top: 30px; }
+  h1 { max-width: 13ch; }
+  .thread { min-height: 170px; }
+}

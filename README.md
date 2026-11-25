@@ -56,6 +56,52 @@ The Park family is the ordinary case: two salaried people with "just" a 401(k) a
 
 ![The Roth IRA, the checking account and the car are in Jordan's name alone](gallery/fig4-park-whose-name.png)
 
+## Run belongs-to in eve
+
+A map is only as useful as the papers behind it. In the eve chat, give the agent a folder and let it read the pages. It stops to ask when a document could change who owns something or who receives it. Leave the question open and the drawing shows the gap in red. Each document fact points to a page so you can open the papers and check it yourself.
+
+Download the ownership view, the death view, and a QSBS ledger when the folder supports one. The download also includes a list of what to do and the model with its citations. Keep the files, open the HTML offline, or take them to an attorney or another AI.
+
+Your own Vercel project runs the chat and sandbox. Vercel AI Gateway sends the text the agent reads to Anthropic Claude Sonnet 5 by default. If you set `BELONGS_TO_MODEL`, name and review the provider you choose before sharing documents. The deployment and model provider handle the files and their contents. Start with the fictional folders.
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsilverstein%2Fbelongs-to&root-directory=eve&env=BELONGS_TO_PASSWORD&project-name=belongs-to)
+
+1. Import the repository with `eve` as its Root Directory. Enable **Include source files outside of the Root Directory in the Build Step** so eve can use the shared kit and examples.
+2. Set `BELONGS_TO_PASSWORD` to a strong family password in the Vercel project. Anyone with it shares the same account for this deployment. The project needs Vercel Sandbox and AI Gateway access. Vercel project credentials can authenticate Gateway requests. Set `BELONGS_TO_MODEL` if you want a different Gateway model.
+3. Open the app, enter the deployment password, and choose Ellery, Okafor, or Park. When the agent asks about missing papers, choose **Show the pages** to keep the gaps visible, or add the papers and start a fresh review.
+
+For local development, use Node 24 and a running Docker engine. Set `AI_GATEWAY_API_KEY` in your shell for a live model, then run:
+
+```sh
+cd eve
+npm ci
+npm run dev
+```
+
+Open the URL printed by Vite. Use `npm run dev:agent -- --no-ui` to run the eve HTTP agent by itself. The folder picker accepts UTF-8 Markdown and text documents with unique filenames. Use headings such as `## Page 2` to preserve page numbers. A plain file without headings is page 1. Copy scans and PDFs to page-labelled text before uploading. The example buttons send the same fictional source files you can select under `examples/<family>/documents/`.
+
+If the host runs out of file watchers, use the compiled agent with the same chat. Run `npm run build:eve`, then `EVE_DEV=1 npx eve start --host 127.0.0.1 --port 2000`. In a second terminal, run `EVE_BASE_URL=http://127.0.0.1:2000 npm run dev`.
+
+### Check the examples
+
+```sh
+cd eve
+npm run eval -- --max-concurrency 1
+```
+
+Each eve eval sends one folder, waits for a real eve question, answers it, and inspects the returned files. It checks the model with the kit and verifies page references and a set of known facts against the fictional papers. The kit's layout audit also has to pass before any file leaves the sandbox. Page numbers and the checked examples can catch real errors. A reader with the source in hand still checks whether every statement follows from its cited page.
+
+To check the same sandbox, question and downloads without a model provider, create the separate fixture target. It supplies fixed model drafts so the test can isolate the rest of the flow.
+
+```sh
+cd eve
+node scripts/fixture-target.mjs
+(cd .eve-fixture && ../node_modules/.bin/eve build)
+(cd .eve-fixture && EVE_DEV=1 ../node_modules/.bin/eve start --host 127.0.0.1 --port 4289)
+```
+
+With the fixture server running, use `npm run eval -- --url http://127.0.0.1:4289 --max-concurrency 1` from `eve/` in another terminal. The live eval above measures whether the model can extract the facts from the source pages.
+
 ## Export and share
 
 ```bash

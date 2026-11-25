@@ -133,6 +133,7 @@ body{font-family:${FAMILIES.sans};-webkit-font-smoothing:antialiased;text-render
 /* transfer */
 .bt-band{fill:var(--bt-rule-2);opacity:.55}
 .bt-band-court{fill:var(--bt-flag-wash);opacity:1;stroke:var(--bt-flag-line);stroke-width:1;stroke-dasharray:5 4}
+.bt-band-gap{stroke:var(--bt-flag);stroke-dasharray:4 4}
 .bt-colhead{font:500 11px ${FAMILIES.mono};fill:var(--bt-ink-3);letter-spacing:.07em}
 .bt-bandhead{font:500 11px ${FAMILIES.mono};fill:var(--bt-ink);letter-spacing:.06em}
 .bt-bandsub{font:400 12.5px ${FAMILIES.sans};fill:var(--bt-ink-2)}
@@ -273,7 +274,7 @@ function legendSvg(kind) {
   return "";
 }
 
-export function pageHtml({ model, view, figureSvg, figureWidth, stackedSvg = null, extraSections = [], notes, legend, receipt, sourcesUsed }) {
+export function pageHtml({ model, view, figureSvg, figureWidth, stackedSvg = null, extraSections = [], notes, legend, receipt, sourcesUsed, readerNote = "Your documents were read by the assistant that made this page, and by nothing else." }) {
   const docs = sourcesUsed.map((id) => ({ id, ...model.documents[id] }));
   const missing = footerMissing(model);
   const todos = [...Object.values(view.fixes ?? {}), ...todosFromIntake(model)];
@@ -310,7 +311,7 @@ ${CSS}</style>
     ${missing.length ? `<div class="bt-missing"><h4>We looked for these and couldn’t find them</h4><ul class="bt-sources">${missing.map((d) => `<li>${esc(d)}</li>`).join("")}</ul></div>` : ""}
     <div><h4>How we double-checked</h4><ul class="bt-receipt">${receipt.map((r) => `<li class="${r.open ? "open" : ""}">${esc(r.text)}</li>`).join("")}</ul></div>
     ${view.law ? `<p class="bt-law"><b>The rules behind this</b> ${esc(view.law)}</p>` : ""}
-    <p class="bt-disclaimer"><span>This shows what your documents say. It isn’t legal or tax advice. The form fixes you can do yourself; for a will or a trust, an attorney should look at this first.</span><span class="bt-mark">Your documents were read by the assistant that made this page, and by nothing else.</span></p>
+    <p class="bt-disclaimer"><span>This shows what your documents say. It isn’t legal or tax advice. The form fixes you can do yourself; for a will or a trust, an attorney should look at this first.</span><span class="bt-mark">${esc(readerNote)}</span></p>
   </footer>
 </article>
 <script>${SCRIPT}</script>

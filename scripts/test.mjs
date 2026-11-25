@@ -622,11 +622,17 @@ test("a disclaimer mentioned without its deadline fails", () => {
   if (!c.passed) throw new Error(c.problems.join("; "));
 });
 
+test("a missing will leaves the recipient open", () => {
+  const raw = load("ellery");
+  raw.parties.sam.will = { source: { status: "unknown", note: "No will in the documents" } };
+  const birch = deathRoutes(normalize(raw), "sam-dies").find((row) => row.id === "birchllc");
+  if (birch.route !== "unknown" || birch.to.length) throw new Error("The missing will must leave the recipient open");
+});
+
 test("intestacy in a community-property state needs both branches in the note", () => {
   const raw = load("ellery");
   raw.jurisdiction = { state: "California", communityProperty: true, label: "California, a community-property state", source: { doc: "will-sam", at: "Art. 1" } };
-  raw.parties.sam.will = { source: { status: "unknown", note: "no will in the documents" } };
-  raw.intake.lookedFor.push({ what: "Sam's will", result: "missing" });
+  raw.parties.sam.will = { none: true, source: { doc: "will-sam", at: "Intake note, p. 1" } };
   expectFail(raw, "absence said as absence", /community property and if any part is separate/);
   raw.views[1].notes.find((n) => n.on === "birchllc").body += " If it is community property it goes to Dana; if any part was separate, that part is split with the children.";
   const r = verify(normalize(raw));

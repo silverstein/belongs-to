@@ -132,7 +132,7 @@ export function deathRoutes(model, eventId) {
       if (will) facts.push(will.source);
       route = "probate";
       if (will?.residueTo) { to = [{ to: will.residueTo, share: 1 }]; detail = `Then the will sends it to ${inSentence(shortName(model.nodes[will.residueTo]))}`; }
-      else if (will?.source?.status === "unknown") { to = [{ to: "intestacy", share: 1 }]; detail = "No will on file, so the state’s default list decides"; }
+      else if (will?.source?.status === "unknown") { route = "unknown"; to = []; detail = "The documents don’t show what the will says"; }
       else if (will?.none) { to = [{ to: "intestacy", share: 1 }]; detail = "No will, so the state’s default list decides"; }
       else { to = []; detail = "Passes under the will"; }
     }
@@ -156,6 +156,7 @@ export function deathRoutes(model, eventId) {
   for (const node of Object.values(model.nodes)) {
     if (node.kind !== "trust" || !node.trust?.revocable || !node.trust.grantors?.includes(event.who)) continue;
     const terms = node.trust.onDeath;
+    const termsUnknown = terms?.source?.status === "unknown";
     for (const holding of holdingsBy(model, node.id)) {
       const item = model.nodes[holding.held];
       const survivorTrustee = terms?.trusteeAfter === "survivor" ? (event.survivors ?? []).map((id) => shortName(model.nodes[id])).join(" and ") : null;
@@ -163,8 +164,8 @@ export function deathRoutes(model, eventId) {
       const wholeValue = valueOf(model, item.id);
       const trustValue = wholeValue == null || holding.fraction == null ? null : wholeValue * holding.fraction;
       rows.push({
-        id: item.id, item, holding, value: trustValue, route: "trust", to: [{ to: node.id, share: 1 }],
-        detail: terms?.first === "continues" ? `Stays in the trust${survivorTrustee ? `, which ${survivorTrustee} now runs` : ""} (${terms.source?.at ?? "trust terms"})` : `Follows the trust’s rules${terms?.source?.at ? ` (${terms.source.at})` : ""}`,
+        id: item.id, item, holding, value: trustValue, route: termsUnknown ? "unknown" : "trust", to: termsUnknown ? [] : [{ to: node.id, share: 1 }],
+        detail: termsUnknown ? "The documents don’t show what the trust says at a death" : terms?.first === "continues" ? `Stays in the trust${survivorTrustee ? `, which ${survivorTrustee} now runs` : ""} (${terms.source?.at ?? "trust terms"})` : `Follows the trust’s rules${terms?.source?.at ? ` (${terms.source.at})` : ""}`,
         facts: [holding.source, terms?.source].filter(Boolean),
         via: node.id,
       });
