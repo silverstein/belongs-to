@@ -27,6 +27,8 @@ export default defineAgent({
     const inventedBeneficiary = input.includes("Try the invented Roth beneficiary first.");
     const layoutRepairs = input.includes("Try two Park layout errors, then adjust the checked layout.");
     const changedFacts = input.includes("Add the documented vehicle trim after the first Park packet.");
+    const changedHeadline = input.includes("Revise the first Park headline after the packet.");
+    const falsePageFacts = input.includes("Try false Park facts on real pages before drafting.");
     const missingTitle = input.includes("Try an Ellery draft with no death view title, then add it.");
     if (input.includes("Ask the Ellery intake questions before drafting.")) {
       const answers = toolResults.filter((row) => row.name === "ask_question")
@@ -58,7 +60,7 @@ export default defineAgent({
           draft.views[1].bands = draft.views[1].bands.filter((band: string) => band !== "probate");
           return tool("finish_review", { modelJson: JSON.stringify(draft) });
         }
-        if (((inventedBeneficiary || missingTitle) && reviews.length === 1) || (layoutRepairs && reviews.length === 2)) {
+        if (((inventedBeneficiary || missingTitle || falsePageFacts) && reviews.length === 1) || (layoutRepairs && reviews.length === 2)) {
           return tool("finish_review", { modelJson: JSON.stringify(model) });
         }
         return `The example could not be checked. ${output.errors.join(" ")}`;
@@ -73,11 +75,26 @@ export default defineAgent({
         draft.assets.car.name = "2022 Subaru Outback Limited";
         return tool("finish_review", { modelJson: JSON.stringify(draft) });
       }
+      if (!output?.waitingForDocuments && changedHeadline && reviews.length === 1) {
+        const draft = structuredClone(model);
+        draft.views[0].title = "Jordan's Roth IRA and checking account are in Jordan's name.";
+        return tool("finish_review", { modelJson: JSON.stringify(draft) });
+      }
+      if (output?.waitingForDocuments && input.includes("Proceed with the same Park folder.")) {
+        return tool("finish_review", { modelJson: JSON.stringify(model) });
+      }
       return output?.waitingForDocuments ? "Start again with the complete folder." : "The pages are ready. Start with the gap in the paperwork.";
     }
     if (inventedBeneficiary) {
       const draft = structuredClone(model);
       draft.assets.roth.designation = { primary: [{ to: "mia", share: 1 }], source: { status: "assumed" } };
+      return tool("finish_review", { modelJson: JSON.stringify(draft) });
+    }
+    if (falsePageFacts) {
+      const draft = structuredClone(model);
+      draft.assets.roth.value.usd = 77000;
+      draft.assets.roth.designation.primary = [{ to: "casey", share: 1 }];
+      draft.holdings.find((holding: { held: string }) => holding.held === "roth").holder = "casey";
       return tool("finish_review", { modelJson: JSON.stringify(draft) });
     }
     if (layoutRepairs) {

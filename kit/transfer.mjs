@@ -23,9 +23,13 @@ export const ORDER = ["contract", "agreement", "title", "trust", "declared", "pr
 // What the intestacy card says under its name. In a community-property
 // state there are two answers, so the card says both instead of letting the
 // builder run one as the default.
-export const intestacyLine = (model) => model.raw.jurisdiction?.communityProperty
-  ? "If it’s community property, the spouse. Any separate part is split between the spouse and the children, the way the state’s rulebook says"
-  : "Usually the spouse and children, split the way the state’s rulebook says";
+export function intestacyLine(model) {
+  const jurisdiction = model.raw.jurisdiction;
+  if (jurisdiction?.source?.status === "unknown") return "The family’s state of residence is open";
+  return jurisdiction?.communityProperty
+    ? "If it’s community property, the spouse. Any separate part is split between the spouse and the children, the way the state’s rulebook says"
+    : "Usually the spouse and children, split the way the state’s rulebook says";
+}
 
 export function renderTransfer(model, view, { noteBadges, geometryOnly = false }) {
   const event = model.events[view.event];

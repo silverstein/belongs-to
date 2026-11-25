@@ -7,6 +7,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalize } from "../kit/model.mjs";
 import { verify } from "../kit/verify.mjs";
+import { readFolder } from "../eve/lib/intake.mjs";
+import { inspectReview } from "../eve/lib/review.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const load = (name) => JSON.parse(readFileSync(join(root, "examples", name, "household.json"), "utf8"));
@@ -53,5 +55,32 @@ for (const attack of attacks) {
 }
 for (const r of rows) console.log(`${r.verdict.padEnd(20)} ${r.name}${r.how ? `\n${" ".repeat(21)}${r.how}` : ""}`);
 console.log(`\n${caught} of ${caught + missed} catchable attacks caught${surprises ? `, ${surprises} caught beyond expectation` : ""}; ${uncatchable} attacks the audit cannot see.`);
-console.log("The audit proves the figure agrees with the model. Whether the model agrees with the documents needs a reader with the documents open.");
+console.log("The standalone audit checks the figure against the model. Eve separately checks literal facts against the uploaded text.");
+
+const park = load("park");
+park.views[0].id = "whose-name";
+park.views[1].id = "at-a-death";
+park.assets.car.value.source.at = "p. 2";
+const folder = readFolder(join(root, "examples/park/documents"));
+const baseline = inspectReview(park, folder);
+if (baseline.errors.length) throw Error(baseline.errors.join("\n"));
+const pageAttacks = [
+  ["An invented Roth value with a real page", (raw) => { raw.assets.roth.value.usd = 77000; }, /which does not appear/],
+  ["A named Roth beneficiary on a page that says none", (raw) => {
+    raw.assets.roth.designation.primary = [{ to: "casey", share: 1 }];
+  }, /primary beneficiary/],
+  ["A false account owner with a real page", (raw) => {
+    raw.holdings.find((holding) => holding.held === "roth").holder = "casey";
+  }, /an owner or member/],
+];
+let pageCaught = 0;
+for (const [name, attack, expected] of pageAttacks) {
+  const raw = structuredClone(park);
+  attack(raw);
+  const error = inspectReview(raw, folder).errors.find((message) => expected.test(message));
+  if (error) pageCaught++;
+  else missed++;
+  console.log(`${error ? "caught" : "MISSED"}               ${name}${error ? `\n                     ${error}` : ""}`);
+}
+console.log(`${pageCaught} of ${pageAttacks.length} Eve page evidence attacks caught.`);
 process.exit(missed ? 1 : 0);

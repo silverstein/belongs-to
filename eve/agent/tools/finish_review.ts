@@ -9,7 +9,7 @@ type Review = {
   files?: Array<{ name: string; gzip: string; embedsFonts: boolean }>;
 };
 
-type Answer = "show" | "more";
+type Answer = "show";
 type Inspected = Review & { confirmationKey?: string; priorAnswer?: Answer };
 
 async function reviewStep(
@@ -43,7 +43,6 @@ export default defineWorkflowTool({
     const inspected = await reviewStep(ctx, { modelJson });
     if (!inspected.confirmationKey) return { errors: inspected.errors ?? ["Could not check the draft."] };
     const { confirmationKey, priorAnswer } = inspected;
-    if (priorAnswer === "more") return { waitingForDocuments: true };
     if (priorAnswer === "show") return reviewStep(ctx, { confirmationKey });
 
     const gaps = inspected.gapList ?? [];
@@ -59,7 +58,7 @@ export default defineWorkflowTool({
         { id: "more", label: "I have another document" },
       ],
     });
-    if (answer.status !== "answered" || (answer.optionId !== "show" && answer.optionId !== "more")) {
+    if (answer.status !== "answered" || answer.optionId !== "show") {
       return { waitingForDocuments: true };
     }
     return reviewStep(ctx, { confirmationKey, answer: answer.optionId });

@@ -197,6 +197,8 @@
       "value": {
         "usd": 282850,
         "basis": "equity after the loan",
+        "gross": 685000,
+        "loan": 402150,
         "source": {
           "doc": "06-home-value-and-mortgage-oct-2026.md",
           "at": "p. 1 and p. 2"

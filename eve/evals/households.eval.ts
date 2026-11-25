@@ -38,6 +38,18 @@ const regressions = {
     description: "Answer Ellery intake before one checked review and packet",
     request: "Ask the Ellery intake questions before drafting.",
   },
+  headline: {
+    description: "Ask again after the checked headline changes",
+    request: "Revise the first Park headline after the packet.",
+  },
+  pageFacts: {
+    description: "Reject invented amounts and names with real page numbers",
+    request: "Try false Park facts on real pages before drafting.",
+  },
+  more: {
+    description: "Let the family proceed after first asking to add a document",
+    request: "Offer the Park review so the family can decide.",
+  },
 };
 
 const scenarios = [
@@ -47,6 +59,9 @@ const scenarios = [
   { name: "park" as const, regression: "facts" as const },
   { name: "ellery" as const, regression: "title" as const },
   { name: "ellery" as const, regression: "intake" as const },
+  { name: "park" as const, regression: "headline" as const },
+  { name: "park" as const, regression: "pageFacts" as const },
+  { name: "park" as const, regression: "more" as const },
 ];
 
 const localModule = (path: string) => pathToFileURL(resolve(process.cwd(), path)).href;
@@ -189,11 +204,34 @@ export default scenarios.map(({ name, regression }) => defineEval({
         t.check([...intakeAnswers.values()], equals(["Ohio (Recommended)", "Use the uploaded documents"]))
           .label("Intake chose the recommended option, then the first option when no choice was recommended");
       }
+      if (regression === "pageFacts") {
+        const errors = completedReviews.flatMap((row) => (row.output as ReviewResult | undefined)?.errors ?? []);
+        t.check(errors.some((error) => error.includes("which does not appear")), equals(true))
+          .label("A real page without the stated amount was refused");
+        t.check(errors.some((error) => error.includes("primary beneficiary")), equals(true))
+          .label("The named beneficiary was refused on a page that says none");
+        t.check(errors.some((error) => error.includes("an owner or member")), equals(true))
+          .label("The named owner was refused on a page without that name");
+      }
+
+      if (regression === "more") {
+        const deferred = await respond(question.interactionId, "more", "Eve accepted the request to add a document");
+        if (!deferred) return;
+        t.check(calls(deferred.view, { name: "finish_review" }).some((row) =>
+          Boolean((row.output as Files | undefined)?.files?.length)), equals(false))
+          .label("The choice to add a document kept the packet closed");
+        inFlight = await session.start("Proceed with the same Park folder.");
+        turn = await inFlight.result();
+        inFlight = undefined;
+        question = pendingReviewQuestion(turn.view);
+        t.check(Boolean(question), equals(true)).label("The same draft can ask again when the family changes its mind");
+      }
 
       const submitted = new Set<string>();
       let answered = turn;
-      const reviewCount = regression === "facts" ? 2 : 1;
-      while (question && submitted.size < reviewCount && !submitted.has(question.interactionId)) {
+      const confirmationCount = regression === "facts" || regression === "headline" ? 2 : 1;
+      const reviewCount = regression === "more" ? 2 : confirmationCount;
+      while (question && submitted.size < confirmationCount && !submitted.has(question.interactionId)) {
         const { interactionId } = question;
         submitted.add(interactionId);
         t.log(`Answering review question ${submitted.size} (${interactionId}).`);
@@ -206,7 +244,7 @@ export default scenarios.map(({ name, regression }) => defineEval({
       const reviewQuestions = session.events.filter((event) =>
         event.type === "interaction.opened" && event.data.origin?.call?.name === "finish_review");
       t.check(reviewQuestions.length, equals(reviewCount)).label(reviewCount === 1
-        ? "The family saw exactly one review question" : "The changed facts required a new confirmation");
+        ? "The family saw exactly one review question" : "The family saw a new confirmation");
       if (regression === "layout") {
         t.check(calls(answered.view, { name: "finish_review" }).filter((row) =>
           Boolean((row.output as Files | undefined)?.files?.length)).length, equals(2))
@@ -223,7 +261,7 @@ export default scenarios.map(({ name, regression }) => defineEval({
       const reviews = calls(answered.view, { name: "finish_review" }).filter((call) => call.outcome === "completed");
       const packets = reviews.filter((call) => (call.output as Files | undefined)?.files?.length);
       const packet = packets.at(-1)?.output as Files | undefined;
-      if (regression === "facts") {
+      if (regression === "facts" || regression === "headline") {
         t.check(packets.length, equals(2)).label("Each confirmed version produced a packet");
       }
       if (process.env.BELONGS_TO_PACKET_DIR) {

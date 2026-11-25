@@ -274,7 +274,10 @@ function legendSvg(kind) {
   return "";
 }
 
-export function pageHtml({ model, view, figureSvg, figureWidth, stackedSvg = null, extraSections = [], notes, legend, receipt, sourcesUsed, readerNote = "Your documents were read by the assistant that made this page, and by nothing else." }) {
+export function pageHtml({ model, view, figureSvg, figureWidth, stackedSvg = null, extraSections = [], notes, legend, receipt, sourcesUsed, eve = false }) {
+  const readerNote = eve
+    ? "Your Vercel deployment keeps document text in eve’s session history and uploaded files in the sandbox. The model reads the text through Vercel AI Gateway."
+    : "Your documents were read by the assistant that made this page, and by nothing else.";
   const docs = sourcesUsed.map((id) => ({ id, ...model.documents[id] }));
   const missing = footerMissing(model);
   const todos = [...Object.values(view.fixes ?? {}), ...todosFromIntake(model)];

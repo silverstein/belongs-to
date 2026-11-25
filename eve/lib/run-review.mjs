@@ -37,7 +37,7 @@ try {
   const [key, action, expectedKey, answer] = process.argv.slice(2);
   if (!/^[a-f0-9]{32}$/.test(key) || !["inspect", "render"].includes(action)
       || (action === "render" && !/^[a-f0-9]{64}$/.test(expectedKey))
-      || (answer !== undefined && !["show", "more"].includes(answer))) throw Error("Invalid review.");
+      || (answer !== undefined && answer !== "show")) throw Error("Invalid review.");
   const path = join("reviews", key);
   const modelPath = join(path, "household.json");
   const model = JSON.parse(readFileSync(modelPath, "utf8"));
@@ -54,7 +54,7 @@ try {
     console.log(JSON.stringify({
       gapList: inspected.gapList,
       confirmationKey,
-      priorAnswer: prior?.key === confirmationKey ? prior.answer : undefined,
+      priorAnswer: prior?.key === confirmationKey && prior.answer === "show" ? prior.answer : undefined,
     }));
   } else {
     if (expectedKey !== confirmationKey) throw Error("The facts changed during review. Check the draft again.");
@@ -64,10 +64,6 @@ try {
       renameSync(temp, confirmationPath);
     }
     const decision = answer ?? (prior?.key === confirmationKey ? prior.answer : undefined);
-    if (decision === "more") {
-      console.log(JSON.stringify({ waitingForDocuments: true }));
-      process.exit(0);
-    }
     if (decision !== "show") throw Error("The family must confirm this draft before the pages can be drawn.");
     const out = join(path, "out");
     execFileSync(process.execPath, ["scripts/build.mjs", modelPath, "--out", out, "--eve"], { encoding: "utf8", timeout: 15000 });

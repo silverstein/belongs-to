@@ -1,5 +1,5 @@
 import "./stage.mjs";
-import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { evidenceUploadNames } from "../evals/upload-names.mjs";
@@ -8,7 +8,6 @@ const app = fileURLToPath(new URL("../", import.meta.url));
 const target = join(app, ".eve-fixture");
 mkdirSync(target, { recursive: true });
 cpSync(join(app, "agent"), join(target, "agent"), { recursive: true });
-rmSync(join(target, "agent/tools/read_file.ts"), { force: true });
 cpSync(join(app, "evals/fixture-agent.ts"), join(target, "agent/agent.ts"));
 writeFileSync(join(target, "package.json"), JSON.stringify({ name: "belongs-to-eve", private: true, type: "module", dependencies: { eve: "1.5.0", zod: "^4.3.0" } }));
 
@@ -31,6 +30,8 @@ function prepareFixture(name, anonymize) {
     if (["trust", "will-sam", "idgt", "ada-trust", "theo-trust"].includes(doc)) data.signed = "signed";
   }
   if (name === "okafor") {
+    model.parties.ada = { kind: "person", name: "Ada Okafor", source: { doc: "ada-trust", at: "p. 4" } };
+    model.parties.theo = { kind: "person", name: "Theo Okafor", source: { doc: "theo-trust", at: "p. 4" } };
     model.documents["ada-trust"].short = "Ada trust";
     model.documents["theo-trust"].short = "Theo trust";
     model.parties.holdco.llc = { source: { status: "unknown", note: "The documents do not include the agreement's terms for a member's death." } };

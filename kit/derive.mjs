@@ -43,6 +43,7 @@ export function deathRoutes(model, eventId) {
   const event = model.events[eventId];
   if (!event || event.kind !== "death") throw new Error(`No death event "${eventId}"`);
   const who = model.nodes[event.who];
+  const stateOpen = model.raw.jurisdiction?.source?.status === "unknown";
   const rows = [];
 
   for (const holding of holdingsBy(model, event.who)) {
@@ -73,6 +74,10 @@ export function deathRoutes(model, eventId) {
     const override = Boolean(declared?.trust?.survivorship?.ends);
     const declare = () => {
       facts.push(item.trustSchedule.source);
+      if (stateOpen) {
+        route = "unknown"; to = []; detail = "The state is unknown, so the trust’s list does not settle this route";
+        return;
+      }
       route = "declared"; to = [{ to: declared.id, share: 1 }];
       if (override && (holding.joint || holding.formUnknown)) { facts.push(declared.trust.survivorship.source); detail = "On the trust’s list, which ends survivorship. Likely the trust’s after one court step."; }
       else detail = "On the trust’s list. Likely the trust’s after one court step.";
@@ -131,7 +136,8 @@ export function deathRoutes(model, eventId) {
       const will = who.will;
       if (will) facts.push(will.source);
       route = "probate";
-      if (will?.residueTo) { to = [{ to: will.residueTo, share: 1 }]; detail = `Then the will sends it to ${inSentence(shortName(model.nodes[will.residueTo]))}`; }
+      if (stateOpen) { route = "unknown"; to = []; detail = "The documents don’t show the state, so this transfer stays open"; }
+      else if (will?.residueTo) { to = [{ to: will.residueTo, share: 1 }]; detail = `Then the will sends it to ${inSentence(shortName(model.nodes[will.residueTo]))}`; }
       else if (will?.source?.status === "unknown") { route = "unknown"; to = []; detail = "The documents don’t show what the will says"; }
       else if (will?.none) { to = [{ to: "intestacy", share: 1 }]; detail = "No will, so the state’s default list decides"; }
       else { to = []; detail = "Passes under the will"; }

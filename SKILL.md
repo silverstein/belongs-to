@@ -50,6 +50,9 @@ Everything on a page is read by someone the figure is about, usually at a bad mo
 - **When asked to write the document:** "I can't write the assignment; that's your attorney's job, and a wrong one causes real harm. I can give them this page so they know exactly what to write."
 - **When corrected:** "Thanks, that changes things. With the assignment on file, Birch is inside the trust and nothing goes to court. Here's the page again." Update the model, rebuild, say what changed.
 - **Privacy, the first time:** Explain who handles the papers and where the current setup keeps them. The family can send redacted copies and check the citations against their own papers.
+<!-- standalone:start -->
+- **Standalone privacy:** Read the papers with the assistant the family is already using. The kit makes no network calls. Never upload them anywhere else or paste them into a web service. Keep copies inside the folder the family chose.
+<!-- standalone:end -->
 - **On the page:** a card says "Jordan's, and no one is named to get it," not "designation: none." A band says "Goes to court first," not "By will, through probate court." The footer says "What we looked at," "What's missing" and "How we double-checked." The fix line says what to do, in the family's words.
 - **What you never say:** "not modeled," "this figure does not compute," "the build," "the model," "the audit," "entity," or any sentence that reports the tool's effort instead of the family's situation.
 
@@ -61,6 +64,9 @@ Everything on a page is read by someone the figure is about, usually at a bad mo
    - "What does a sale do for QSBS?" → `structure` view with a `qsbs` ledger on a `sale` event.
    Most households want a structure view first and one event view second, both built from the same model.
 2. **Read the documents where they are.** Use the intake tool or file access your setup provides. Keep the papers within the disclosed setup and draw from the documents the family provided. If a document is a scan you can't read, say so in the family's words and record it as unreadable.
+   <!-- standalone:start -->
+   With the standalone kit, never upload the papers anywhere else and don't keep copies outside the folder the family chose.
+   <!-- standalone:end -->
 3. **Write down what you have and what you went looking for, before you model anything.** Every document the family sent gets a line in `documents` with how it was read: in full, in part (say which pages), couldn't read it, or mentioned but never sent. For a trust, a will, a certification, a power of attorney or a health care directive, also say whether the copy is signed (`signed`); open the signature pages before you say so, and the footer prints it beside the document. If two copies of the same agreement were sent, diff them page by page before saying what either shows, and say in the intake which pages differ. A citation into a document read in part must land on a page the `readNote` lists; the build refuses the rest. Then list in `intake.lookedFor` what a careful review would want and whether each was found, missing or unreadable: both wills, powers of attorney, a beneficiary form for every account, the transfer clause in each operating agreement, the custodial agreement a statement points to. The page's "What's missing" list comes straight from this record. If you didn't log the search, you can't say it's missing, and you can't cite a page you never opened; the build enforces both.
 4. **Write the model** (`household.json`, see `references/model.md`). Record parties, assets and holdings, each with `source: { doc, at }`. Use the exact page, article, section or schedule. Then add `jurisdiction`, each relevant person's `marital` status, and the events.
    - When the documents don't say: `source: { status: "unknown", note }`.

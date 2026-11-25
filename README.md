@@ -2,9 +2,11 @@
 
 **Hand it a family's documents. It draws who owns what, and where it goes when someone dies or a company sells. Every box says which page it came from. If the documents don't answer a question, the picture says so instead of making something up.**
 
+Most agent demos show an agent doing more. In the eve demo, belongs-to shows what the papers leave unresolved. Each documented fact names its page. Missing answers appear as gaps, and eve draws the pages only after the family confirms.
+
 ![When Sam dies, one rental would likely go through probate court](gallery/fig1-when-sam-dies.png)
 
-Sam and Dana have a trust, two rental LLCs, a 401(k), and an attorney, a CPA and an advisor who have never been in the same room. Sam is fairly sure everything is in the trust. It isn't. One LLC was never moved in, and if Sam dies first, that building goes through probate court while everything else moves without a judge.
+Sam and Dana have a trust, two rental LLCs, a 401(k), and an attorney, a CPA and an advisor who have never been in the same room. Sam is fairly sure everything is in the trust. The papers show an assignment for Elm Street Rentals LLC and list Sam as the sole member of Birch Avenue LLC. On those papers, Birch Avenue LLC would go through probate if Sam dies first.
 
 belongs-to reads the documents and draws that. Three drawings:
 
@@ -16,11 +18,13 @@ belongs-to reads the documents and draws that. Three drawings:
 |---|---|
 | ![Whose name everything is in](gallery/fig2-whose-name.png) | ![QSBS stacking](gallery/fig3-qsbs.png) |
 
-## What it won't do
+## What the checks cover
 
-It won't draw what it can't point to. Every card names the document and page it came from. If the paperwork doesn't say who gets the Roth, the card says "no one is named" in red, not "none." If a document was mentioned but never handed over, or was a scan it couldn't read, that shows up on the page too, under "What's missing."
+Every card names the document and page it came from. An empty beneficiary field supports a finding that no one is named. A missing beneficiary form leaves the answer open. The page also lists documents that were mentioned but absent or could not be read.
 
-Three limits. If it misreads a page, the drawing will be confidently wrong; that is why every card names its page, so you can check it in thirty seconds. It knows the general rules (how property passes at a death, the QSBS date bands) and says which situations it doesn't cover, such as community property and state probate shortcuts. And it never writes the fix: it tells you an assignment or a beneficiary form would close the gap, and your attorney writes it.
+The kit checks ownership totals, rules, and layout against the household model. Eve also checks that cited pages were read, that literal dollar amounts appear on those pages, and that a cited page contains the names used for beneficiaries and owners. A page reporting no named beneficiary cannot support a name for that designation. For equity calculated from an appraisal and a loan, eve checks the two amounts and the subtraction. Other expressly explained derived or estimated values rely on the agent's explanation.
+
+A matching name or number can refer to a different role, asset, date, or amount on the same page. The checks cannot establish those relationships or decide whether the documents are complete or current. Open the cited page to check the meaning. The kit applies general US transfer mechanisms and federal QSBS rules. A missing state leaves transfers that depend on state law open. Bring the pages to an attorney or CPA for the legal or tax decision and any documents that need to be drafted.
 
 No human attorney has reviewed a real family's output yet; one real household has been through a blind AI attorney panel and a judge three times, scoring 4, then 6, then 7 out of 10, and each round's findings became checks in this release. The judge's verdict: a document map a careful attorney can work from, not yet a page a family relies on alone. How the examples were checked, and what the checks can and can't catch, is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -64,11 +68,12 @@ Download the ownership view, the death view, and a QSBS ledger when the folder s
 
 Your own Vercel project runs the chat and sandbox. Document text stays in eve’s session history, and the uploaded files stay in the sandbox within your deployment. Vercel AI Gateway sends the text the agent reads to Anthropic Claude Sonnet 5.5 by default. If you set `BELONGS_TO_MODEL`, review the provider you choose before sharing documents. Start with the fictional folders.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsilverstein%2Fbelongs-to&root-directory=eve&env=BELONGS_TO_PASSWORD&project-name=belongs-to)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsilverstein%2Fbelongs-to&root-directory=eve&install-command=npm%20ci&build-command=npm%20run%20build&env=BELONGS_TO_PASSWORD&project-name=belongs-to)
 
-1. Import the repository with `eve` as its Root Directory. Enable **Include source files outside of the Root Directory in the Build Step** so eve can use the shared kit and examples.
-2. Set `BELONGS_TO_PASSWORD` to a strong family password in the Vercel project. Anyone with it shares the same account for this deployment. The project needs Vercel Sandbox and AI Gateway access. Vercel project credentials can authenticate Gateway requests. Set `BELONGS_TO_MODEL` if you want a different Gateway model.
-3. Open the app, enter the deployment password, and choose Ellery, Okafor, or Park. When the agent asks about missing papers, choose **Show the pages** to keep the gaps visible, or add the papers and start a fresh review.
+1. Use the button to create a Vercel project from the full repository. The button selects `eve` as Root Directory, `npm ci` for install, and `npm run build` for build. Use Node.js 24.x and keep the build output setting at its default so the Eve Vite plugin can assemble the web app and agent service. [Vercel Deploy Button build settings](https://vercel.com/docs/deploy-button/build-settings)
+2. Keep **Include source files outside of the Root Directory in the Build Step** enabled under **Build and Deployment**. Vercel enables it by default on new projects. The install step in `eve` reads the kit, examples, and references from the same repository. Enable the setting before building if reusing a project where it was turned off. [Vercel monorepo settings](https://vercel.com/docs/monorepos/monorepo-faq#can-i-share-source-files-between-projects-are-shared-packages-supported)
+3. Set `BELONGS_TO_PASSWORD` to a long, unique password. This shared password has no attempt limit, and everyone with it shares the deployment's account. Enable Vercel Sandbox and AI Gateway for the project. The project can authenticate Gateway requests with Vercel credentials. Set `BELONGS_TO_MODEL` to choose another Gateway model.
+4. Open the app, enter the password, and choose Ellery, Okafor, or Park. At the review question, choose **Show the pages** to leave the gaps visible. If you choose **I have another document**, you can start with the complete folder or ask to continue this review and choose **Show the pages**.
 
 For local development, use Node 24 and a running Docker engine. Set `AI_GATEWAY_API_KEY` in your shell for a live model, then run:
 
@@ -96,7 +101,7 @@ Run all three households once the preflight passes.
 npm run eval -- --url http://127.0.0.1:2000 --exclude-tag fixture --max-concurrency 1
 ```
 
-Each eve eval sends one folder, answers each review confirmation, and inspects the returned files. It checks the model with the kit and verifies page references and a set of known facts against the fictional papers. The facts and layout audits must pass before the family is asked. Pages are drawn after confirmation. Layout edits can reuse the last answer while the facts and gaps stay the same. A reader with the source in hand still checks whether every statement follows from its cited page.
+Each eve eval sends one folder, answers the review confirmation, and inspects the returned files. It checks literal evidence on cited pages and verifies specific known facts against the fictional papers. Both audits pass before the family is asked, and pages are drawn after confirmation. Layout edits reuse the answer when the facts, gaps and wording stay the same. Changing a headline, note or task asks the family to confirm again.
 
 Set `BELONGS_TO_PACKET_DIR` to an absolute directory when running the eval to save its downloadable files under the session and review call IDs. To recover files from a saved Eve case, run `node scripts/export-packet.mjs <eval-case.json> <output-directory>` from `eve/`. The saved HTML includes its fonts and opens offline.
 
@@ -109,7 +114,7 @@ node scripts/fixture-target.mjs
 (cd .eve-fixture && EVE_DEV=1 ../node_modules/.bin/eve start --host 127.0.0.1 --port 4289)
 ```
 
-With the fixture server running, use `npm run eval -- --url http://127.0.0.1:4289 --max-concurrency 1` from `eve/` in another terminal. The fixtures cover an uncited Roth beneficiary, two layout repairs before one question, and a new confirmation after a fact changes. The live eval above measures whether the model can extract the facts from the source pages. From the repository root, run `eve/node_modules/.bin/tsc -p eve` for the type check.
+With the fixture server running, use `npm run eval -- --url http://127.0.0.1:4289 --max-concurrency 1` from `eve/` in another terminal. The fixtures cover a missing title, intake answers, bad names and amounts on real pages, layout repairs, renewed confirmation after a headline or fact changes, and choosing to proceed after asking to add a document. The live eval measures whether the model extracts the expected facts and returns a checked packet. From the repository root, run `eve/node_modules/.bin/tsc -p eve` after `npm ci` in `eve/`.
 
 ## Export and share
 

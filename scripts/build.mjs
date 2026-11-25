@@ -54,6 +54,9 @@ function buildView(view) {
   const illustrative = facts.open.filter((o) => o.status === "illustrative");
   const notIn = footerMissing(model).length;
   if (checkNamed("intake recorded")) receipt.push(readReceipt(model, citedDocs));
+  if (model.raw.jurisdiction?.source?.status === "unknown") {
+    receipt.push({ text: "The family’s state of residence is open. Any transfer that depends on state law stays open.", open: true });
+  }
   if (notIn) receipt.push({ text: `${notIn} ${notIn === 1 ? "thing" : "things"} we looked for and couldn’t find, listed here`, open: true });
   if (illustrative.length) receipt.push({ text: `The sale price is an example, not a real offer`, open: true });
 
@@ -113,7 +116,7 @@ function buildView(view) {
   if (geometryOnly) return;
 
   const html = pageHtml({ model, view, figureSvg: rendered.svg, figureWidth: rendered.width, stackedSvg: stacked?.svg ?? null, extraSections, notes, legend, receipt, sourcesUsed: citedDocs,
-    readerNote: args.includes("--eve") ? "Your Vercel deployment keeps document text in eve’s session history and uploaded files in the sandbox. The model reads the text through Vercel AI Gateway." : undefined });
+    eve: args.includes("--eve") });
   const file = join(outDir, `${view.id}.html`);
   pages.push({ file, html });
 }

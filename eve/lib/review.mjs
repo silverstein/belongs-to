@@ -15,15 +15,23 @@ function stableJson(value) {
 }
 
 export function reviewConfirmationKey(raw, gaps) {
-  // The views choose scenarios from the facts. Their placement and copy can
-  // change as the model repairs the layout without changing the confirmation.
   const { household, asOf, jurisdiction, documents, parties, assets, holdings, events, intake, views } = raw;
-  const scenarios = views.map(({ id, event, ledger }) => ({ id, event, ledger }));
-  const intakeFindings = (intake?.lookedFor ?? []).map(({ what, result, doc }) => ({ what, result, doc }));
+  // Keep every authored claim and label. Ignore coordinates and the order of
+  // plotted cards, bands, and recipients while keeping their membership.
+  const scenarios = views.map(({ place, order, bands, recipients, pitch, cardWidth, zones, ...content }) => ({
+    ...content,
+    place: place && Object.keys(place).sort(),
+    order: order && [...order].sort(),
+    bands: bands && [...bands].sort(),
+    recipients: recipients && [...recipients].sort(),
+    zones: zones?.map(({ x, y, w, h, labelBox, members, ...zone }) => ({
+      ...zone, members: members && [...members].sort(),
+    })).map(stableJson).sort(),
+  }));
   return createHash("sha256").update(stableJson({
     household, asOf, jurisdiction, documents, parties, assets, events,
     holdings: holdings.map(stableJson).sort(),
-    intake: intakeFindings.map(stableJson).sort(),
+    intake,
     scenarios: scenarios.map(stableJson).sort(),
     gaps: [...new Set(gaps)].sort(),
   })).digest("hex");
@@ -35,15 +43,74 @@ function citationPages(at) {
   return locator ? [...locator[1].matchAll(/\d+/g)].map((match) => Number(match[0])) : [];
 }
 
-function checkSources(value, folder, documents, location, errors) {
+const dollarFields = ["usd", "gross", "loan", "pricePerShare", "basisPerShare"];
+const normalizedName = (text) => String(text ?? "").normalize("NFKC").toLowerCase().match(/[\p{L}\p{N}]+/gu)?.join(" ") ?? "";
+const includesName = (page, name) => {
+  const words = normalizedName(name);
+  return words && ` ${normalizedName(page)} `.includes(` ${words} `);
+};
+
+function pageNumbers(text) {
+  const amounts = new Set();
+  for (const [, digits, unit] of text.matchAll(/(?<![\w.,])(?:\$\s*)?(-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?:\s*([kmb]))?(?!\w|[.,]\d)/gi)) {
+    const scale = { k: 1e3, m: 1e6, b: 1e9 }[unit?.toLowerCase()] ?? 1;
+    amounts.add(Number(digits.replaceAll(",", "")) * scale);
+  }
+  return amounts;
+}
+
+function namesNobody(page, tier) {
+  const empty = /\b(?:(primary|contingent)\s+)?beneficiar(?:y|ies)(?:\s+(?:on file|designation))?\s*[:=]\s*(?:none|no one|not named|not on file)\b/gi;
+  return [...page.matchAll(empty)].some((match) => (match[1]?.toLowerCase() ?? "primary") === tier)
+    || page.split("\n").some((line) => new RegExp(`^\\s*(?:[-*]\\s*)?no ${tier === "contingent" ? "contingent " : "(?:primary )?"}beneficiar(?:y|ies) (?:named|on file|designated)\\b`, "i").test(line));
+}
+
+function checkPageFacts(value, source, pages, nodes, location, label, errors) {
+  const numbers = pageNumbers(pages.join("\n"));
+  const equity = Number.isFinite(value.gross) && Number.isFinite(value.loan)
+    && Math.abs(value.gross - value.loan - value.usd) < 0.005;
+  const explained = /\b(?:derived|estimated)\s+(?:by|from|using|as|at)\b/i.test(source.note ?? "");
+  for (const field of dollarFields) {
+    const amount = value[field];
+    if (typeof amount !== "number" || numbers.has(amount)) continue;
+    if (field === "usd" && (equity || (explained && numbers.size > 0))) continue;
+    errors.push(`${label}.${field} gives $${amount}, which does not appear on ${source.doc}, ${source.at}. Cite the page with the amount or explain the calculation or estimate.`);
+  }
+
+  const checkName = (target, role, allowedPages = pages) => {
+    const name = nodes[target]?.name;
+    if (!name || !allowedPages.some((page) => includesName(page, name))) {
+      errors.push(`${label} needs a cited page naming ${name ?? target} as ${role} in ${source.doc}, ${source.at}.`);
+    }
+  };
+  if (location[0] === "holdings" && location.length === 2) {
+    for (const holder of value.holders ?? (value.holder ? [value.holder] : [])) {
+      if (nodes[holder]?.kind !== "group") checkName(holder, "an owner or member");
+    }
+  }
+  if (["designation", "beneficiaries"].includes(location.at(-1))) {
+    for (const tier of ["primary", "contingent"]) {
+      const allowedPages = pages.filter((page) => !namesNobody(page, tier));
+      for (const entry of value[tier] ?? []) checkName(typeof entry === "string" ? entry : entry.to, `a ${tier} beneficiary`, allowedPages);
+    }
+  }
+  if (location.at(-1) === "llc" && value.successor) checkName(value.successor, "the member's successor");
+  if (location.at(-1) === "will" && value.residueTo) checkName(value.residueTo, "the recipient of the residue");
+  if (location.at(-1) === "successorOwner" && value.to) checkName(value.to, "the successor owner");
+}
+
+function checkSources(value, folder, documents, nodes, location, errors) {
   if (!value || typeof value !== "object") return;
+  const label = ["Household", ...location].join(".");
+  if (dollarFields.some((field) => typeof value[field] === "number") && !value.source?.doc) {
+    errors.push(`${label} gives a dollar amount without a cited page. Cite the source or leave the amount open.`);
+  }
   if (value.source) {
     const { doc, at, status } = value.source;
     const [collection, , group, condition] = location;
     const saleScenario = status === "illustrative" && collection === "events" && location.length === 2 && value.kind === "sale";
     const eligibilityAssumption = status === "assumed" && collection === "parties" && location.length === 4
       && group === "qsbs" && QSBS_CONDITIONS.some(({ key }) => key === condition);
-    const label = ["Household", ...location].join(".");
     if (Object.hasOwn(value.source, "doc")) {
       const pages = folder.get(doc);
       const cited = citationPages(at);
@@ -53,13 +120,15 @@ function checkSources(value, folder, documents, location, errors) {
           || ["unreadable", "not-provided"].includes(document?.read)
           || cited.some((page) => !pages.has(page) || (covered && !covered.has(page)))) {
         errors.push(`${label} needs a page that exists in ${String(doc)} and was read. List each page, for example "p. 1 and p. 2".`);
+      } else {
+        checkPageFacts(value, value.source, cited.map((page) => pages.get(page)), nodes, location, label, errors);
       }
     } else if (status !== "unknown" && !eligibilityAssumption) {
       errors.push(`${label} needs a document page or must stay open. A sample sale needs the page with its terms.`);
     }
   }
   for (const [key, child] of Object.entries(value)) {
-    if (key !== "source") checkSources(child, folder, documents, [...location, key], errors);
+    if (key !== "source") checkSources(child, folder, documents, nodes, [...location, key], errors);
   }
 }
 
@@ -68,26 +137,42 @@ function checkReaderCopy(raw, folder, errors) {
   const readable = new Map(Object.entries(raw.documents)
     .filter(([, doc]) => doc.read === "read" || doc.read === "partial")
     .map(([filename, doc]) => [plain(String(doc.short)).toLowerCase(), { doc, pages: folder.get(filename) }]));
+  const names = [raw.household, ...Object.values({ ...raw.parties, ...raw.assets }).flatMap(({ name, short }) => [name, short])]
+    .filter((name) => typeof name === "string" && /\s/.test(name)).map(plain).sort((a, b) => b.length - a.length);
   const check = (text, where) => {
     if (typeof text !== "string" || !personalPronoun.test(text)) return;
-    const unquoted = plain(text).replace(/"([^"]+)"\s*\(([^,"]+),\s*p\.\s*(\d+)\)/g, (citation, quote, short, pageText) => {
+    let unquoted = plain(text).replace(/"([^"]+)"\s*\(([^"]+?),\s*(p\.[^)]*)\)/g, (citation, quote, short, pageText) => {
       const source = readable.get(short.trim().toLowerCase());
-      const page = Number(pageText);
-      const words = source?.pages?.get(page);
       const readPages = source?.doc.read === "partial" ? pagesCovered(source.doc.readNote) : null;
-      return words && (!readPages || readPages.has(page)) && plain(words).includes(quote) ? "" : citation;
+      const cited = citationPages(pageText);
+      if (!cited.length || cited.some((page) => !source?.pages?.has(page) || (readPages && !readPages.has(page)))) return citation;
+      const words = cited.map((page) => source.pages.get(page)).join(" ");
+      return plain(words).includes(quote) ? "" : citation;
     });
+    for (const name of names) unquoted = unquoted.replaceAll(name, "");
     const pronoun = personalPronoun.exec(unquoted)?.[0];
     if (pronoun) errors.push(`${where} uses "${pronoun}". Use the person's documented name, or quote the exact words with the document short name and page.`);
   };
   for (const view of raw.views) {
-    for (const field of ["title", "subtitle", "kicker"]) check(view[field], `${view.id} ${field}`);
+    for (const field of ["title", "subtitle", "kicker", "law"]) check(view[field], `${view.id} ${field}`);
     for (const [index, note] of (view.notes ?? []).entries()) {
       for (const field of ["title", "body", "fix"]) check(note[field], `${view.id} note ${String.fromCharCode(65 + index)} ${field}`);
     }
     for (const [card, fix] of Object.entries(view.fixes ?? {})) check(fix, `${view.id} fix for ${card}`);
   }
-  for (const { what, todo } of raw.intake?.lookedFor ?? []) check(todo, `What to do for ${what}`);
+  const prose = new Set(["title", "shortTitle", "label", "legend", "detail", "basis", "text", "note", "what", "todo", "readNote"]);
+  const visit = (entry, path) => {
+    if (!entry || typeof entry !== "object") return;
+    for (const [key, value] of Object.entries(entry)) {
+      const where = `${path}.${key}`;
+      if ((prose.has(key) && !(key === "title" && /^views\.\d+(?:\.notes\.\d+)?$/.test(path)))
+          || (path.startsWith("documents.") && key === "short")) check(value, where);
+      visit(value, where);
+    }
+  };
+  for (const collection of ["documents", "parties", "assets", "holdings", "events", "intake", "jurisdiction", "views"]) {
+    visit(raw[collection], collection);
+  }
 }
 
 export function inspectReview(raw, folder) {
@@ -116,7 +201,7 @@ export function inspectReview(raw, folder) {
     if (!id.test(name) || ["__proto__", "constructor", "prototype"].includes(name)) errors.push("Use simple IDs for people, property and events.");
   }
   if (errors.length) return { errors };
-  checkSources(raw, folder, raw.documents, [], errors);
+  checkSources(raw, folder, raw.documents, { ...raw.parties, ...raw.assets }, [], errors);
 
   const viewIds = new Set();
   for (const view of raw.views) {
@@ -126,7 +211,11 @@ export function inspectReview(raw, folder) {
   }
   if (!viewIds.has("whose-name") || !viewIds.has("at-a-death")) errors.push("Include both whose-name and at-a-death.");
   if (Object.values(raw.events).some((event) => event.kind === "sale") && !viewIds.has("qsbs")) errors.push("Include the separate QSBS view for the sale.");
-  if (!raw.jurisdiction?.source?.doc || !raw.jurisdiction.state) errors.push("Cite the page that shows the family's state.");
+  const stateOpen = raw.jurisdiction?.source?.status === "unknown";
+  if (stateOpen ? raw.jurisdiction.state != null || raw.jurisdiction.communityProperty != null || raw.jurisdiction.label != null
+    : !raw.jurisdiction?.source?.doc || !raw.jurisdiction.state) {
+    errors.push("Cite the family's state, or set jurisdiction.source.status to unknown and leave state, communityProperty and label open.");
+  }
   for (const person of Object.values(raw.parties).filter((party) => party.kind === "person" && party.marital)) {
     if (!person.marital.source?.doc) errors.push(`Cite the page that shows whether ${person.name} is married.`);
   }
@@ -170,6 +259,7 @@ export function inspectReview(raw, folder) {
 
   const todo = [...new Set([...raw.views.flatMap((view) => Object.values(view.fixes ?? {})), ...todosFromIntake(model)])];
   const gaps = new Set();
+  if (stateOpen) gaps.add("The family's state of residence");
   for (const doc of Object.values(raw.documents)) {
     if (["unsigned", "unknown"].includes(doc.signed)) gaps.add(`A signed copy of ${doc.short}`);
   }

@@ -294,7 +294,8 @@ export function verify(model) {
     for (const m of String(text ?? "").matchAll(/\(([^()]*?)\)/g)) {
       for (const part of m[1].split(";")) {
         if (!/(^|[\s,])pp?\.\s*\d/.test(part)) continue;
-        const name = part.split(",")[0].trim();
+        const page = /\bpp?\.\s*\d/.exec(part);
+        const name = part.slice(0, page.index).replace(/,\s*$/, "").trim();
         if (!name || /^(pp?\.|Art\.|§|notes?\b)/.test(name)) continue;
         if (!shorts.has(plain(name))) { proseCiteProblems.push(`${where} cites "${name}, …" but no readable document is listed with the short name "${name}"`); continue; }
         const docId = shorts.get(plain(name));
