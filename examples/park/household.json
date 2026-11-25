@@ -447,7 +447,7 @@
       ],
       "notes": [
         {
-          "on": "jordan",
+          "on": ["jordan", "casey"],
           "tone": "flag",
           "title": "Neither Jordan nor Casey has a will.",
           "body": "The intake notes say so (p. 1). Without one, anything that ends up in court goes to whoever Colorado’s default list names, in shares the state sets. With a six-year-old, a will is also where a guardian for Mia is named."

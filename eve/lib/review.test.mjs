@@ -56,3 +56,9 @@ test("a confirmation follows the facts and gap set through layout edits", () => 
   draft.assets.car.name = "2022 Subaru Outback Limited";
   assert.notEqual(reviewConfirmationKey(draft, gapList), key);
 });
+
+test("a missing death view title returns a draft field error", () => {
+  const draft = structuredClone(parkedModel);
+  delete draft.views[1].title;
+  assert.deepEqual(inspectReview(draft, folder).errors, ["views resolve: at-a-death needs text in title."]);
+});

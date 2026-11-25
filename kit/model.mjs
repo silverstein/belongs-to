@@ -5,6 +5,10 @@ import { readFileSync } from "node:fs";
 
 export const SOURCE_STATUSES = ["unknown", "assumed", "illustrative"];
 
+export function noteTargets(note) {
+  return Array.isArray(note.on) ? [...new Set(note.on)] : note.on == null ? [] : [note.on];
+}
+
 export function loadModel(path) {
   const raw = JSON.parse(readFileSync(path, "utf8"));
   return normalize(raw);

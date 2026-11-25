@@ -2,7 +2,7 @@
 // resolves, ownership closes to 100%, nothing is orphaned, every fact is cited
 // or openly marked unknown/assumed/illustrative, and every high-severity
 // finding the derivations produce is surfaced by a note in some view.
-import { isCited, holdingsOf, taxpayerOf, citeLabel, shortName, valueOf } from "./model.mjs";
+import { isCited, holdingsOf, taxpayerOf, citeLabel, shortName, valueOf, noteTargets } from "./model.mjs";
 import { deathRoutes, qsbsLedger, QSBS_CONDITIONS, QSBS_RULES, DISCLAIMER_RULE } from "./derive.mjs";
 
 // The pages a partial read covers, from its readNote ("pp. 1 to 6, 20 and
@@ -224,7 +224,9 @@ export function verify(model) {
   const absenceProblems = [];
   const unknownNodes = new Set([...Object.values(nodes).filter((n) => ["designation", "value", "tax", "will"].some((k) => n[k]?.source?.status === "unknown")).map((n) => n.id), ...unknownForms.map((h) => h.held)]);
   for (const view of model.views) for (const note of view.notes ?? []) {
-    if (note.on && unknownNodes.has(note.on) && !/document|on file|paperwork|isn’t in|isn't in|nothing (here|shows)/i.test(`${note.title} ${note.body}`)) absenceProblems.push(`${view.id}: the note on ${note.on} states a missing fact without saying it is missing from the documents`);
+    for (const id of noteTargets(note)) {
+      if (unknownNodes.has(id) && !/document|on file|paperwork|isn’t in|isn't in|nothing (here|shows)/i.test(`${note.title} ${note.body}`)) absenceProblems.push(`${view.id}: the note on ${id} states a missing fact without saying it is missing from the documents`);
+    }
     // "never assigned" is an absence stated as fact; "never qualifies" is a rule. Only the first kind is refused.
     const over = `${note.title} ${note.body} ${view.title} ${view.subtitle ?? ""}`.match(/\b(never (?:\w+ ){0,2}?(?:assigned|moved|signed|named|funded|retitled|filed|transferred|recorded|changed|updated|made|done|put|added|set up|executed|delivered|sent|given|got|had|was|were)\b|everything they own|all they own)\b/i);
     if (over) absenceProblems.push(`${view.id}: "${over[0]}" claims more than the documents can show`);
@@ -255,15 +257,15 @@ export function verify(model) {
   }
   // A trust that ends survivorship for what it lists (cited) decides ahead
   // of the deed's form; a note on a listed asset may not say the form decides.
-  for (const view of model.views) for (const note of view.notes ?? []) {
-    const node = note.on && nodes[note.on];
+  for (const view of model.views) for (const note of view.notes ?? []) for (const id of noteTargets(note)) {
+    const node = nodes[id];
     const trust = node?.trustSchedule && nodes[node.trustSchedule.trust];
     if (!trust?.trust?.survivorship?.ends) continue;
     const text = `${note.title} ${note.body}`;
     const m = text.match(/\b(trust or no trust|by a form|the (deed|form|title) decides|whatever the trust says|regardless of the trust)\b/i);
     // "Without a signed trust, the deed decides" is the honest branch, not the claim this refuses.
     const sentence = m ? text.slice(Math.max(0, text.lastIndexOf(".", m.index) + 1), (text.indexOf(".", m.index) + 1) || text.length) : "";
-    if (m && !/without a signed trust|if the trust was(n’t|n't| not| never) signed|unsigned|only without/i.test(sentence)) absenceProblems.push(`${view.id}: the note on ${note.on} says "${m[0]}", but the trust's own text ends survivorship for what it lists (${citeLabel(model, trust.trust.survivorship.source)}); say what the trust says and name the attorney's question`);
+    if (m && !/without a signed trust|if the trust was(n’t|n't| not| never) signed|unsigned|only without/i.test(sentence)) absenceProblems.push(`${view.id}: the note on ${id} says "${m[0]}", but the trust's own text ends survivorship for what it lists (${citeLabel(model, trust.trust.survivorship.source)}); say what the trust says and name the attorney's question`);
   }
   // A page that mentions a disclaimer trust owes the one fact that makes it urgent.
   for (const view of model.views) for (const note of view.notes ?? []) {
@@ -277,7 +279,7 @@ export function verify(model) {
     try { rows = deathRoutes(model, eventId); } catch {}
     for (const row of rows) {
       if (!row.to.some((e) => e.to === "intestacy")) continue;
-      const notes = model.views.flatMap((v) => (v.notes ?? []).filter((n) => n.on === row.id).map((n) => `${n.title} ${n.body}`));
+      const notes = model.views.flatMap((v) => (v.notes ?? []).filter((n) => noteTargets(n).includes(row.id)).map((n) => `${n.title} ${n.body}`));
       if (!notes.some((t) => /community/i.test(t) && /separate/i.test(t))) absenceProblems.push(`${row.id} would pass by intestacy in a community-property state; a note on it must say what happens if it is community property and if any part is separate`);
     }
   }
@@ -338,12 +340,23 @@ export function verify(model) {
   }
   const parseMoney = (text) => { const m = text.match(/^\$([\d,.]+)\s*([KMB])?/); if (!m) return null; const n = parseFloat(m[1].replace(/,/g, "")); return n * ({ K: 1e3, M: 1e6, B: 1e9 }[m[2]] ?? 1); };
   const proseProblems = [];
+  const viewProblems = [];
   for (const view of model.views) {
-    const texts = [view.title, view.subtitle ?? "", ...(view.notes ?? []).flatMap((n) => [n.title, n.body])];
-    for (const text of texts) for (const hit of text.match(/\$[\d][\d,.]*\s?[KMB]?/g) ?? []) {
-      const value = parseMoney(hit.replace(/\s/, ""));
-      const close = [...numbers].some((n) => Math.abs(n - value) <= Math.max(0.006 * Math.abs(n), 0.5));
-      if (!close) proseProblems.push(`${view.id}: "${hit}" in the text doesn't match any value in the model or its derivations`);
+    const fields = [["title", view.title]];
+    if (view.subtitle != null) fields.push(["subtitle", view.subtitle]);
+    for (const [index, note] of (view.notes ?? []).entries()) {
+      fields.push([`notes[${index}].title`, note.title], [`notes[${index}].body`, note.body]);
+    }
+    for (const [field, text] of fields) {
+      if (typeof text !== "string" || (field !== "subtitle" && !text.trim())) {
+        viewProblems.push(`${view.id} needs text in ${field}.`);
+        continue;
+      }
+      for (const hit of text.match(/\$[\d][\d,.]*\s?[KMB]?/g) ?? []) {
+        const value = parseMoney(hit.replace(/\s/, ""));
+        const close = [...numbers].some((n) => Math.abs(n - value) <= Math.max(0.006 * Math.abs(n), 0.5));
+        if (!close) proseProblems.push(`${view.id}: "${hit}" in the text doesn't match any value in the model or its derivations`);
+      }
     }
   }
   check("numbers in the text match the model", proseProblems);
@@ -363,16 +376,18 @@ export function verify(model) {
 
   // 6. Every high-severity finding is surfaced by a note in some view
   const surfaceProblems = [];
-  const noted = new Set(model.views.flatMap((view) => (view.notes ?? []).map((note) => note.on).filter(Boolean)));
+  const noted = new Set(model.views.flatMap((view) => (view.notes ?? []).flatMap(noteTargets)));
   for (const finding of findings) if (finding.severity === "high" && !noted.has(finding.node)) surfaceProblems.push(`not surfaced in any view: ${finding.text}`);
   check("findings surfaced", surfaceProblems);
 
   // 7. Views reference real things
-  const viewProblems = [];
   for (const view of model.views) {
     for (const id of Object.keys(view.place ?? {})) if (!nodes[id]) viewProblems.push(`${view.id} places unknown "${id}"`);
     for (const zone of view.zones ?? []) for (const id of zone.members) if (!view.place?.[id]) viewProblems.push(`${view.id} zone ${zone.id} includes "${id}", which is not placed`);
-    for (const note of view.notes ?? []) if (note.on && view.type === "structure" && !view.place?.[note.on]) viewProblems.push(`${view.id} note is on "${note.on}", which is not placed`);
+    for (const note of view.notes ?? []) for (const id of noteTargets(note)) {
+      if (typeof id !== "string" || !Object.hasOwn(nodes, id)) viewProblems.push(`${view.id} note points to an unknown card "${id}"`);
+      else if (view.type === "structure" && !view.place?.[id]) viewProblems.push(`${view.id} note is on "${id}", which is not placed`);
+    }
     if (view.event && !model.events[view.event]) viewProblems.push(`${view.id} uses unknown event "${view.event}"`);
   }
   check("views resolve", viewProblems);

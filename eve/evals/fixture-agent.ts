@@ -27,6 +27,7 @@ export default defineAgent({
     const inventedBeneficiary = input.includes("Try the invented Roth beneficiary first.");
     const layoutRepairs = input.includes("Try two Park layout errors, then adjust the checked layout.");
     const changedFacts = input.includes("Add the documented vehicle trim after the first Park packet.");
+    const missingTitle = input.includes("Try an Ellery draft with no death view title, then add it.");
     const reviews = toolResults.filter((row) => row.name === "finish_review");
     const result = reviews.at(-1);
     if (result) {
@@ -37,7 +38,7 @@ export default defineAgent({
           draft.views[1].bands = draft.views[1].bands.filter((band: string) => band !== "probate");
           return tool("finish_review", { modelJson: JSON.stringify(draft) });
         }
-        if ((inventedBeneficiary && reviews.length === 1) || (layoutRepairs && reviews.length === 2)) {
+        if (((inventedBeneficiary || missingTitle) && reviews.length === 1) || (layoutRepairs && reviews.length === 2)) {
           return tool("finish_review", { modelJson: JSON.stringify(model) });
         }
         return `The example could not be checked. ${output.errors.join(" ")}`;
@@ -63,6 +64,11 @@ export default defineAgent({
       const draft = structuredClone(model);
       const place = draft.views[0].place;
       place.k401 = place.roth;
+      return tool("finish_review", { modelJson: JSON.stringify(draft) });
+    }
+    if (missingTitle) {
+      const draft = structuredClone(model);
+      delete draft.views.find((view: { id: string }) => view.id === "at-a-death").title;
       return tool("finish_review", { modelJson: JSON.stringify(draft) });
     }
     return tool("finish_review", { modelJson: JSON.stringify(model) });

@@ -2,7 +2,7 @@
 // receipt, as one self-contained HTML page (fonts embedded, no network).
 import { fontFaceCss, FAMILIES } from "./fonts.mjs";
 import { esc, listJoin } from "./text.mjs";
-import { citeLabel, missingFromIntake, todosFromIntake, footerMissing } from "./model.mjs";
+import { citeLabel, missingFromIntake, todosFromIntake, footerMissing, noteTargets } from "./model.mjs";
 
 export const CSS = `
 :root{
@@ -222,11 +222,11 @@ const SCRIPT = `
   if (theme === "dark" || theme === "light") document.documentElement.dataset.theme = theme;
   for (const canvas of document.querySelectorAll(".bt-canvas")) {
     const edges = [...canvas.querySelectorAll(".bt-edge, .bt-flow")];
-    const trace = (id) => {
-      const on = new Set([id]);
+    const trace = (...ids) => {
+      const on = new Set(ids);
       // everything above (holders) and below (held) the card
       const walk = (start, dir) => { const stack = [start]; while (stack.length) { const cur = stack.pop(); for (const e of edges) { const a = dir > 0 ? e.dataset.from : e.dataset.to, b = dir > 0 ? e.dataset.to : e.dataset.from; if (a === cur && !on.has(b)) { on.add(b); stack.push(b); } } } };
-      walk(id, 1); walk(id, -1);
+      for (const id of ids) { walk(id, 1); walk(id, -1); }
       canvas.classList.add("bt-tracing");
       for (const n of canvas.querySelectorAll(".bt-node")) n.classList.toggle("bt-on", on.has(n.dataset.id));
       for (const e of edges) e.classList.toggle("bt-on", on.has(e.dataset.from) && on.has(e.dataset.to));
@@ -248,7 +248,7 @@ const SCRIPT = `
     for (const node of canvas.querySelectorAll(".bt-node")) node.addEventListener("click", () => { const id = node.dataset.id; history.replaceState(null, "", pinned === id ? "#" : "#focus=" + id); applyHash(); });
     for (const note of document.querySelectorAll(".bt-note[data-on]")) {
       if (!note.dataset.on) continue;
-      note.addEventListener("pointerenter", () => trace(note.dataset.on));
+      note.addEventListener("pointerenter", () => trace(...note.dataset.on.split(" ")));
       note.addEventListener("pointerleave", clear);
     }
     for (const node of canvas.querySelectorAll(".bt-node")) {
@@ -304,7 +304,7 @@ ${CSS}</style>
   ${stackedSvg ? `<div class="bt-canvas bt-canvas-stacked">${stackedSvg}</div>` : `<p class="bt-swipe">Swipe the figure sideways to follow every line.</p>`}
   ${legend?.length ? `<div class="bt-legend">${legend.map((item) => `<span>${legendSvg(item.kind)}${esc(item.text)}</span>`).join("")}</div>` : ""}
   ${extraSections.map((s) => `<div class="bt-section">${s}</div>`).join("")}
-  ${notes.length ? `<section class="bt-notes" aria-label="Notes">${notes.map((n) => `<div class="bt-note ${esc(n.tone)}" data-on="${esc(n.on ?? "")}"><h3><span class="bt-letter ${esc(n.tone)}">${esc(n.letter)}</span><span>${esc(n.title)}</span></h3><p>${esc(n.body)}</p></div>`).join("")}</section>` : ""}
+  ${notes.length ? `<section class="bt-notes" aria-label="Notes">${notes.map((n) => `<div class="bt-note ${esc(n.tone)}" data-on="${esc(noteTargets(n).join(" "))}"><h3><span class="bt-letter ${esc(n.tone)}">${esc(n.letter)}</span><span>${esc(n.title)}</span></h3><p>${esc(n.body)}</p></div>`).join("")}</section>` : ""}
   ${todos.length ? `<section class="bt-todo" aria-label="What to do"><h4>What to do</h4><ol>${todos.map((t) => `<li>${esc(t)}</li>`).join("")}</ol></section>` : ""}
   <footer class="bt-foot${missing.length ? " bt-has-missing" : ""}">
     <div><h4>What we looked at</h4><ul class="bt-sources">${docs.map((d) => `<li><b>${esc(d.short)}</b>${esc(d.title)}${d.date && !d.title.includes(d.date.slice(0, 4)) ? `, ${esc(d.date.slice(0, 4))}` : ""}${d.read === "partial" ? ` <i>(${esc(d.readNote ?? "read in part")})</i>` : ""}${d.signed === "unsigned" ? ` <i>(copy unsigned)</i>` : d.signed === "unknown" ? ` <i>(signature pages not in the copy)</i>` : ""}</li>`).join("")}</ul></div>

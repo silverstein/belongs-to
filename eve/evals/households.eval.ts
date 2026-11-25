@@ -1,7 +1,7 @@
 import { gunzipSync } from "node:zlib";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { defineEval } from "eve/evals";
+import { defineEval, type EveEvalLiveTurn } from "eve/evals";
 import { equals } from "eve/evals/expect";
 import { calls, openInteractions, type SessionView } from "eve/events";
 import { readFolder } from "../lib/intake.mjs";
@@ -30,6 +30,10 @@ const regressions = {
     description: "Ask again when the checked facts change",
     request: "Add the documented vehicle trim after the first Park packet.",
   },
+  title: {
+    description: "Return a field error for an Ellery draft missing its death view title",
+    request: "Try an Ellery draft with no death view title, then add it.",
+  },
 };
 
 const scenarios = [
@@ -37,6 +41,7 @@ const scenarios = [
   { name: "park" as const, regression: "beneficiary" as const },
   { name: "park" as const, regression: "layout" as const },
   { name: "park" as const, regression: "facts" as const },
+  { name: "ellery" as const, regression: "title" as const },
 ];
 
 const localModule = (path: string) => pathToFileURL(resolve(process.cwd(), path)).href;
@@ -97,11 +102,20 @@ export default scenarios.map(({ name, regression }) => defineEval({
       type: "file" as const, filename, mediaType: "text/markdown", data: Buffer.from(sources[sourceName]).toString("base64"),
     }));
     const session = await t.session();
+    // Eve 1.5.0 gives start a text-only type. Its driver uses the same
+    // message path as send, including inline file parts.
+    const start = session.start.bind(session) as
+      (message: Parameters<typeof session.send>[0]) => Promise<EveEvalLiveTurn>;
+    let inFlight: EveEvalLiveTurn | undefined;
     try {
-      const turn = await session.send([
+      inFlight = await start([
         { type: "text", text: `Please review the uploaded documents. Draw whose name things are in, what happens at a death, and a QSBS ledger if the uploads include a sale scenario.${regression ? ` ${regressions[regression].request}` : ""}` },
         ...files,
       ]);
+      const bytes = Object.values(sources).reduce((total, content) => total + Buffer.byteLength(content), 0);
+      t.log(`Eve accepted ${files.length} files (${bytes} bytes before encoding) for ${session.id}.`);
+      const turn = await inFlight.result();
+      inFlight = undefined;
       turn.awaitingInput();
       let question = pendingReviewQuestion(turn.view);
       t.check(Boolean(question), equals(true)).label("Eve paused at the review gate");
@@ -123,6 +137,11 @@ export default scenarios.map(({ name, regression }) => defineEval({
         t.check(completedReviews.filter((row) => (row.output as ReviewResult | undefined)?.errors?.some((error) =>
           error.includes("layout audit FAILED"))).length, equals(2)).label("Two layout failures were returned before the first question");
       }
+      if (regression === "title") {
+        t.check(completedReviews.some((row) => (row.output as ReviewResult | undefined)?.errors?.some((error) =>
+          error.includes("at-a-death needs text in title."))), equals(true))
+          .label("The missing title received a field error before the question");
+      }
 
       const submitted = new Set<string>();
       let answered = turn;
@@ -130,7 +149,9 @@ export default scenarios.map(({ name, regression }) => defineEval({
         const { interactionId } = question;
         submitted.add(interactionId);
         t.log(`Answering review question ${submitted.size} (${interactionId}).`);
-        answered = await session.respond([{ interactionId, optionId: "show" }]);
+        inFlight = await session.startRespond([{ interactionId, optionId: "show" }]);
+        answered = await inFlight.result();
+        inFlight = undefined;
         const accepted = session.events.some((event) => event.type === "interaction.settled"
           && event.data.interactionId === interactionId && event.data.outcome === "accepted"
           && event.data.response?.optionId === "show");
@@ -192,9 +213,14 @@ export default scenarios.map(({ name, regression }) => defineEval({
         t.check(html.includes("<!doctype html>") && html.includes("Content-Security-Policy"), equals(true)).label(file.name);
       }
     } finally {
-      const events = session.events;
+      const events = [...session.events, ...(inFlight?.events ?? [])];
       const count = (type: string) => events.filter((event) => event.type === type).length;
       t.log(`Observed ${count("turn.started")} turns, ${count("model.started")} model starts, and ${count("call.requested")} calls including skills.`);
+      if (inFlight) {
+        const lastReview = calls(inFlight.view, { name: "finish_review" }).findLast((call) => call.outcome === "completed");
+        const error = (lastReview?.output as ReviewResult | undefined)?.errors?.[0];
+        if (error) t.log(`Last completed review error: ${error.slice(0, 300)}`);
+      }
     }
   },
 }));

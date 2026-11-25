@@ -5,7 +5,7 @@
 // writes the pages anyway so you can look at what is wrong.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { loadModel, shortName, footerMissing } from "../kit/model.mjs";
+import { loadModel, shortName, footerMissing, noteTargets } from "../kit/model.mjs";
 import { verify } from "../kit/verify.mjs";
 import { renderStructure } from "../kit/structure.mjs";
 import { renderTransfer } from "../kit/transfer.mjs";
@@ -37,7 +37,10 @@ let failed = !facts.ok;
 function buildView(view) {
   const notes = (view.notes ?? []).map((note, i) => ({ ...note, letter: String.fromCharCode(65 + i) }));
   const noteBadges = new Map();
-  for (const note of notes) if (note.on) { if (!noteBadges.has(note.on)) noteBadges.set(note.on, []); noteBadges.get(note.on).push({ letter: note.letter, tone: note.tone }); }
+  for (const note of notes) for (const id of noteTargets(note)) {
+    if (!noteBadges.has(id)) noteBadges.set(id, []);
+    noteBadges.get(id).push({ letter: note.letter, tone: note.tone });
+  }
   const extraSections = [];
   let rendered, stacked = null, legend = [];
   const receipt = [];
@@ -46,7 +49,7 @@ function buildView(view) {
   // date or a count in a note is not checked, so the line doesn't claim it.
   if (checkNamed("every fact cited or marked")) receipt.push({ text: "Every dollar figure here points to one of your documents. Where we couldn’t find something, we said so." });
   const openHere = facts.open.filter((o) => o.status !== "illustrative");
-  const openLetters = [...new Set(openHere.map((o) => notes.find((n) => n.on === o.where.split(".")[0])?.letter).filter(Boolean))].sort();
+  const openLetters = [...new Set(openHere.map((o) => noteBadges.get(o.where.split(".")[0])?.[0]?.letter).filter(Boolean))].sort();
   if (openHere.length) receipt.push({ text: `${openHere.length === 1 ? "One thing" : `${openHere.length} things`} the documents don’t answer. We said so instead of guessing${openLetters.length ? ` (${openLetters.length === 1 ? "note" : "notes"} ${openLetters.join(", ")})` : ""}`, open: true });
   const illustrative = facts.open.filter((o) => o.status === "illustrative");
   const notIn = footerMissing(model).length;
@@ -79,7 +82,7 @@ function buildView(view) {
     if (view.gaps?.length) legend.push({ kind: "gap", text: view.gaps[0].label });
     for (const zone of view.zones ?? []) if (!legend.find((l) => l.kind === `zone-${zone.tone}`)) legend.push({ kind: `zone-${zone.tone}`, text: zone.taxpayer ? "One taxpayer for income tax" : zone.legend ?? zone.label });
     if (!geometryOnly && view.ledger?.kind === "qsbs") {
-      const assumptionNote = notes.find((n) => n.on === view.ledger.issuer || n.tone === "ask");
+      const assumptionNote = notes.find((n) => noteTargets(n).includes(view.ledger.issuer) || n.tone === "ask");
       const ledger = renderQsbsLedger(model, { ...view.ledger, assumptionLetter: assumptionNote?.letter }, rendered.width);
       extraSections.push(ledger.svg + ledger.checklist);
       receipt.push({ text: `Each taxpayer’s exclusion is worked out from the cap table, not estimated` });
@@ -94,7 +97,12 @@ function buildView(view) {
     legend = [{ kind: "flow", text: "Goes straight to the person. Thicker means more money." }];
     if (rendered.routes.includes("trust")) legend.push({ kind: "flow-stay", text: "Already in the trust. Nothing moves." });
     if (rendered.routes.includes("probate")) legend.push({ kind: "flow-court", text: "Stuck in court first" });
-    receipt.push({ text: `All ${rendered.rows.length} things in ${shortName(model.nodes[model.events[view.event].who])}’s name are on the page, not a selection` });
+    const count = rendered.rows.length;
+    const name = shortName(model.nodes[model.events[view.event].who]);
+    const text = count === 0 ? `Nothing in ${name}’s name is affected by this death.`
+      : count === 1 ? `The only thing in ${name}’s name is on the page.`
+      : `All ${count} things in ${name}’s name are on the page.`;
+    receipt.push({ text });
   } else throw new Error(`Unknown view type ${view.type}`);
 
   const layout = auditLayout(rendered.geometry);

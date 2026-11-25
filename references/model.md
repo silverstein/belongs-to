@@ -140,11 +140,13 @@ The intake record is what the agent looked for, before it modeled anything. It i
   "ledger": { "event": "sale", "kind": "qsbs", "for": ["maya", "adatrust", "theotrust"] },
   "notes": [{ "on": "birchllc", "tone": "flag" | "ask" | "info", "title": "…", "body": "…" }] }
 
-{ "id": "first-death", "type": "transfer", "fig": 3, "event": "sam-dies",
+{ "id": "at-a-death", "type": "transfer", "fig": 3, "event": "sam-dies",
+  "title": "…what goes to whom when Sam dies…",
   "recipients": ["dana", "trust"], "bands": ["title", "contract", "trust", "probate"],
   "order": ["brokerage", "k401", "life", "home", "elmllc", "birchllc"], "notes": [ … ] }
 ```
 
+- Every view needs its own `title`. A note needs a `title` and `body`. Set `on` to a single card ID or an array of card IDs when the same note applies to several cards. The cards share the note's badge.
 - A zone with `taxpayer` must contain exactly that taxpayer's holders.
 - A `gap` arrow needs about 0.9 of a column of clear space. It is for one thing missing from one container (an LLC never assigned to the trust). A household with no trust has no container to point at: use a zone such as "No probate" around what passes by form or title, and let the stragglers sit outside it with `flag` notes.
 - Zone tones: `ok` (green, what is held where it should be), `group` (dashed, one taxpayer; needs `taxpayer`), `flag` (red dashed, a problem set). A zone's legend text is its `label` unless `legend` overrides it.
