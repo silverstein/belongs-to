@@ -23,6 +23,24 @@ test("a beneficiary needs a source page or stays open", () => {
   }
 });
 
+test("the same beneficiary gap appears once while other gaps for the holding stay open", () => {
+  const draft = structuredClone(parkedModel);
+  const { roth } = draft.assets;
+  roth.designation = { source: { status: "unknown" } };
+  const death = draft.views[1];
+  death.title = "What would pass if Jordan died first";
+  death.notes = death.notes.filter((note) => note.on !== "roth");
+  const duplicate = `Beneficiary form for ${roth.name}`;
+  const agreement = `Original account agreement for ${roth.name}`;
+  draft.intake.lookedFor.push({ what: duplicate, result: "missing" }, { what: agreement, result: "missing" });
+  const { errors, gapList } = inspectReview(draft, folder);
+  assert.deepEqual(errors, []);
+  assert.ok(gapList.includes(`Who is named to receive ${roth.name}`));
+  assert.ok(gapList.includes(agreement));
+  assert.ok(!gapList.includes(duplicate));
+  assert.ok(!gapList.some((gap) => gap.startsWith(`Where ${roth.name} goes if`)));
+});
+
 test("every number in a page list must exist and have been read", () => {
   const draft = structuredClone(parkedModel);
   const source = draft.assets.home.value.source;

@@ -294,20 +294,33 @@ export function inspectReview(raw, folder) {
   for (const doc of Object.values(raw.documents)) {
     if (["unsigned", "unknown"].includes(doc.signed)) gaps.add(`A signed copy of ${doc.short}`);
   }
+  const beneficiaryGaps = new Set();
+  const heldItems = Object.values(model.nodes).filter((node) => model.holdings.some((holding) => holding.held === node.id));
   for (const item of Object.values(model.nodes)) {
-    if (item.designation?.source?.status === "unknown") gaps.add(`Who is named to receive ${item.name}`);
+    if (item.designation?.source?.status === "unknown" && !["property", "vehicle"].includes(item.kind)) {
+      beneficiaryGaps.add(item.id);
+      gaps.add(`Who is named to receive ${item.name}`);
+    }
     if (item.designation?.source?.doc && item.designation.primary?.length === 0 && !item.designation.contingent?.length) {
+      beneficiaryGaps.add(item.id);
       gaps.add(`Any newer beneficiary form for ${item.name}`);
     }
   }
   for (const [eventId, event] of Object.entries(model.events)) {
     if (event.kind !== "death") continue;
     for (const route of deathRoutes(model, eventId)) {
-      if (route.route === "unknown") gaps.add(`Where ${route.item.name} goes if ${model.nodes[event.who].name} dies`);
+      if (route.route === "unknown" && !(beneficiaryGaps.has(route.item.id) && route.detail.startsWith("No beneficiary form in the documents"))) {
+        gaps.add(`Where ${route.item.name} goes if ${model.nodes[event.who].name} dies`);
+      }
     }
   }
   for (const item of raw.intake?.lookedFor ?? []) {
-    if (item.result !== "found") gaps.add(item.what);
+    if (item.result === "found") continue;
+    if (/\b(?:beneficiar(?:y|ies)|who is named to receive)\b/i.test(item.what)) {
+      const named = heldItems.filter((node) => includesName(item.what, node.name));
+      if (named.length === 1 && beneficiaryGaps.has(named[0].id)) continue;
+    }
+    gaps.add(item.what);
   }
   return { errors, gapList: [...gaps], todo, checks: facts.checks.map(({ name, passed }) => ({ name, passed })),
     activity: { ...activity, facts: "passed" } };

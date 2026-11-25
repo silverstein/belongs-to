@@ -73,9 +73,12 @@ export function ReviewPacket({ files, theme, onError }: { files: DownloadFile[];
   return (
     <section className="packet reveal" aria-label="Downloads">
       <div className="section-heading"><h3>Your pages</h3></div>
-      <div className="paper-tabs" role="group" aria-label="Choose a page">
-        {pages.map((file) => <Button key={file.name} variant="outline" aria-pressed={selected === file.name}
-          onClick={() => setSelected(file.name)}>{labels[file.name]}</Button>)}
+      <div className="packet-toolbar">
+        <div className="paper-tabs" role="group" aria-label="Choose a page">
+          {pages.map((file) => <Button key={file.name} variant="outline" aria-pressed={selected === file.name}
+            onClick={() => setSelected(file.name)}>{labels[file.name]}</Button>)}
+        </div>
+        {page && <Button variant="outline" disabled={html === undefined} onClick={() => setExpanded(true)}><Expand /> Expand page</Button>}
       </div>
       {page && (
         <>
@@ -84,7 +87,6 @@ export function ReviewPacket({ files, theme, onError }: { files: DownloadFile[];
               The preview could not be opened. <Button variant="outline" onClick={() => setPreviewRetry((count) => count + 1)}>Retry preview</Button>
             </div> : <p className="preview-note" role="status">Opening {labels[page.name]}</p>}
           <div className="packet-actions">
-            <Button variant="outline" disabled={html === undefined} onClick={() => setExpanded(true)}><Expand /> Expand page</Button>
             <Button variant="outline" onClick={() => void save(page).catch(onError)}><Download /> Download page</Button>
             {model && <Button variant="ghost" onClick={() => void save(model).catch(onError)}><Download /> Model and citations</Button>}
           </div>

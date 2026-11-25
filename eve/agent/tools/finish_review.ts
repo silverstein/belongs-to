@@ -65,8 +65,9 @@ export default defineWorkflowTool({
     }
 
     const gaps = inspected.gapList ?? [];
-    const pending = gaps.slice(0, 8).map((gap) => `• ${gap}`).join("\n");
-    const more = gaps.length > 8 ? `\nThe pages will list the other ${gaps.length - 8} items too.` : "";
+    const shown = gaps.length <= 10 ? gaps : gaps.slice(0, 8);
+    const pending = shown.map((gap) => `• ${gap}`).join("\n");
+    const more = shown.length < gaps.length ? `\n\nThe pages will list ${gaps.length - shown.length} more gaps.` : "";
     const answer = await ctx.ask({
       display: "select",
       prompt: gaps.length

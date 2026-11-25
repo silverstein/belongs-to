@@ -194,12 +194,13 @@ export function ReviewTrace({ activity, busy, hasQuestion, hasPacket }: {
           const failed = Boolean(item.errors?.length);
           const earlier = activity.attempts[index - 1];
           const title = earlier?.errors?.length ? `Repair ${index}` : earlier ? "Check revised draft" : "Check the draft";
+          const status = failed ? "failed" : item.audit?.layout === "passed" ? "passed" : "running";
+          const detail = failed ? "Needs repair" : status === "passed" ? "Passed" : undefined;
+          if (!item.audit && !failed) return <TraceRow key={item.id} title={title} status={status} />;
           return (
             <TraceCollapsible key={item.id} defaultOpen>
               <TraceCollapsibleTrigger>
-                <TraceRow title={title}
-                  status={failed ? "failed" : item.audit?.layout === "passed" ? "passed" : "running"}
-                  detail={failed ? "Needs repair" : item.audit?.layout === "passed" ? "Passed" : undefined} />
+                <TraceRow title={title} status={status} detail={detail} />
               </TraceCollapsibleTrigger>
               <TraceCollapsibleContent className="trace-checks">
                 {item.audit && <AuditRows audit={item.audit} />}
@@ -218,7 +219,9 @@ export function ReviewTrace({ activity, busy, hasQuestion, hasPacket }: {
         <details className="evidence" open>
           <summary>{evidence.length} names and amounts found on cited pages</summary>
           <ul>{evidence.map(({ text, doc, at }) => <li key={`${text}:${doc}:${at}`}>
-            <RecordMark kind="confirmed" /><strong>{text}</strong><span>{doc}, {at}</span>
+            <RecordMark kind="confirmed" />
+            <span className="evidence-value" data-amount={/^-?\$\d/.test(text)}>{text}</span>
+            <span className="evidence-source">{doc}, {at}</span>
           </li>)}</ul>
         </details>
       )}

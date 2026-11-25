@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/message-scroller";
 import {
   Questionnaire, QuestionnaireActions, QuestionnaireChoice, QuestionnaireChoices,
-  QuestionnaireError, QuestionnaireInput, QuestionnaireItem, QuestionnaireSubmit, QuestionnaireTitle,
+  QuestionnaireDescription, QuestionnaireError, QuestionnaireInput, QuestionnaireItem, QuestionnaireSubmit, QuestionnaireTitle,
 } from "@/components/ui/questionnaire";
 import { DocumentCards, ReviewTrace, reviewActivity, type DocumentInfo } from "./activity";
 import { ReviewPacket, isPacket } from "./packet";
@@ -79,6 +79,7 @@ function FamilyQuestion({ request, disabled, onAnswer }: {
 }) {
   const options = request.options ?? [];
   const review = options.some(({ label }) => label === "Show the pages");
+  const [prompt, ...details] = review ? request.prompt.split("\n\n") : [request.prompt];
   const canType = request.allowFreeform ?? request.display === "text";
   const choices = options.map(({ id }) => ({ value: `option:${id}` }));
 
@@ -100,8 +101,11 @@ function FamilyQuestion({ request, disabled, onAnswer }: {
       <Questionnaire items={[{ name: "answer", required: true, choices }]} onSubmit={submit}>
         <QuestionnaireItem name="answer" required disabled={disabled}>
           <QuestionnaireTitle className="question-prompt">
-            {review && <RecordMark kind="missing" />} {request.prompt}
+            {review && <RecordMark kind="missing" />} {prompt}
           </QuestionnaireTitle>
+          {details.length > 0 && <QuestionnaireDescription className="question-details">
+            {details.join("\n\n")}
+          </QuestionnaireDescription>}
           <QuestionnaireChoices>
             {options.map((option) => <QuestionnaireChoice key={option.id} value={`option:${option.id}`}>
               <span>{option.label}</span>
@@ -343,7 +347,7 @@ function App() {
                     <FamilyQuestion request={request} disabled={answering || passwordLocked}
                       onAnswer={(response) => void answer(interactionId, response)} />
                   </MessageScrollerItem>)}
-                  {packet && <MessageScrollerItem key={packet.key}>
+                  {packet && <MessageScrollerItem key={packet.key} className="packet-entry">
                     <Marker className="packet-marker"><MarkerContent>Review confirmed</MarkerContent></Marker>
                     <ReviewPacket files={packet.files} theme={theme} onError={report} />
                   </MessageScrollerItem>}
