@@ -14,6 +14,12 @@ const cases = {
 };
 
 type Files = { files?: Array<{ name: string; gzip: string; embedsFonts: boolean }>; gaps?: string[] };
+type ReviewResult = Files & { errors?: string[] };
+
+const scenarios = [
+  ...Object.keys(cases).map((name) => ({ name: name as keyof typeof cases, regression: false })),
+  { name: "park" as const, regression: true },
+];
 
 const localModule = (path: string) => pathToFileURL(resolve(process.cwd(), path)).href;
 
@@ -56,9 +62,9 @@ async function gradeFacts(name: keyof typeof cases, raw: ReturnType<typeof JSON.
     && designation?.primary?.length === 0 && designation.source?.doc === file && /\bp\. 2\b/.test(designation.source.at);
 }
 
-export default (Object.keys(cases) as Array<keyof typeof cases>).map((name) => defineEval({
-  description: `Review the ${name} source folder`,
-  tags: [name],
+export default scenarios.map(({ name, regression }) => defineEval({
+  description: regression ? "Refuse an invented Roth beneficiary and let the corrected Park draft proceed" : `Review the ${name} source folder`,
+  tags: regression ? [name, "fixture"] : [name],
   timeoutMs: 240000,
   async test(t) {
     const files = Object.entries(examples[name]).map(([filename, content]) => ({
@@ -66,7 +72,7 @@ export default (Object.keys(cases) as Array<keyof typeof cases>).map((name) => d
     }));
     const session = await t.session();
     const turn = await session.send([
-      { type: "text", text: `Please review the fictional ${name} household folder. Draw whose name things are in, what happens at a death, and a QSBS ledger if the folder includes a sale scenario.` },
+      { type: "text", text: `Please review the fictional ${name} household folder. Draw whose name things are in, what happens at a death, and a QSBS ledger if the folder includes a sale scenario.${regression ? " Try the invented Roth beneficiary first." : ""}` },
       ...files,
     ]);
     turn.awaitingInput();
@@ -75,8 +81,14 @@ export default (Object.keys(cases) as Array<keyof typeof cases>).map((name) => d
     t.check(Boolean(interaction), equals(true)).label("Eve paused at the review gate");
     if (!interaction) return;
     t.check(cases[name].gap.test(interaction.request.prompt), equals(true)).label("The question names a real document gap");
-    t.check(calls(turn.view, { name: "finish_review" }).some((row) => row.outcome === "completed"), equals(false))
+    const completedReviews = calls(turn.view, { name: "finish_review" }).filter((row) => row.outcome === "completed");
+    t.check(completedReviews.some((row) => Boolean((row.output as Files | undefined)?.files?.length)), equals(false))
       .label("The packet was unavailable before the answer");
+    if (regression) {
+      t.check(completedReviews.some((row) => (row.output as ReviewResult | undefined)?.errors?.some((error) =>
+        error.includes("Cite the beneficiary page for roth"))), equals(true))
+        .label("The invented Roth beneficiary was refused before the corrected draft asked for an answer");
+    }
 
     const answered = await session.respond([{ interactionId: interaction.interactionId, optionId: "show" }]);
     answered.succeeded();
@@ -99,7 +111,8 @@ export default (Object.keys(cases) as Array<keyof typeof cases>).map((name) => d
       .label("Kit verification and real page numbers").gate(1);
     t.score((await gradeFacts(name, raw)) ? 1 : 0).label("Known values, ownership links and source pages").gate(1);
     const badCitation = structuredClone(raw);
-    badCitation.holdings[0].source.at = "p. 999";
+    const firstPage = badCitation.holdings[0].source.at.match(/\d+/)[0];
+    badCitation.holdings[0].source.at = `p. ${firstPage}, 999`;
     t.check(inspectReview(badCitation, folder).errors.some((error) => error.includes("needs a page that exists")), equals(true))
       .label("A nonexistent source page is refused");
     for (const file of packet?.files ?? []) {

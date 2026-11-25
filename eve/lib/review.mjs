@@ -1,25 +1,42 @@
-import { isCited, normalize, todosFromIntake } from "../../kit/model.mjs";
-import { verify } from "../../kit/verify.mjs";
-import { deathRoutes } from "../../kit/derive.mjs";
+import { normalize, todosFromIntake } from "../../kit/model.mjs";
+import { pagesCovered, verify } from "../../kit/verify.mjs";
+import { deathRoutes, QSBS_CONDITIONS } from "../../kit/derive.mjs";
 
 const viewTypes = new Map([["whose-name", "structure"], ["at-a-death", "transfer"], ["qsbs", "structure"]]);
 const id = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+const documentOrUnknown = (source) => Boolean(source?.doc || source?.status === "unknown");
 
-function checkSources(value, folder, path, errors) {
+function citationPages(at) {
+  if (typeof at !== "string" || at.length > 160) return [];
+  const locator = at.trim().match(/^\b(p\.\s*\d+(?:(?:\s*,\s*(?:and\s+)?|\s+and\s+)(?:p\.\s*)?\d+)*)(?:\s*,\s*(?:art(?:icle)?\.?|sec(?:tion)?\.?|§)\s*[\w.()]+)?$/i);
+  return locator ? [...locator[1].matchAll(/\d+/g)].map((match) => Number(match[0])) : [];
+}
+
+function checkSources(value, folder, documents, location, errors) {
   if (!value || typeof value !== "object") return;
-  if (value.source && Object.hasOwn(value.source, "doc")) {
+  if (value.source) {
     const { doc, at, status } = value.source;
-    const pages = folder.get(doc);
-    const matches = typeof at === "string" && at.length <= 160
-      ? [...at.matchAll(/\bp\.\s*(\d+)(?!\d)/gi)] : [];
-    const onPaperScenario = status === "illustrative" && value.kind === "sale" && path.startsWith("Household.events.");
-    if ((status && !onPaperScenario) || !pages || !matches.length || /\bpp\.|\bp\.\s*\d+\s*(?:-|\u2013|to\b|through\b)/i.test(at)
-        || matches.some((match) => !pages.has(Number(match[1])))) {
-      errors.push(`${path} needs a page that exists in ${String(doc)}. Spell out each page, for example "p. 1 and p. 2".`);
+    const [collection, , group, condition] = location;
+    const saleScenario = status === "illustrative" && collection === "events" && location.length === 2 && value.kind === "sale";
+    const eligibilityAssumption = status === "assumed" && collection === "parties" && location.length === 4
+      && group === "qsbs" && QSBS_CONDITIONS.some(({ key }) => key === condition);
+    const label = ["Household", ...location].join(".");
+    if (Object.hasOwn(value.source, "doc")) {
+      const pages = folder.get(doc);
+      const cited = citationPages(at);
+      const document = documents[doc];
+      const covered = document?.read === "partial" ? pagesCovered(document.readNote) : null;
+      if ((status && !saleScenario) || !pages || !cited.length
+          || ["unreadable", "not-provided"].includes(document?.read)
+          || cited.some((page) => !pages.has(page) || (covered && !covered.has(page)))) {
+        errors.push(`${label} needs a page that exists in ${String(doc)} and was read. List each page, for example "p. 1 and p. 2".`);
+      }
+    } else if (status !== "unknown" && !eligibilityAssumption) {
+      errors.push(`${label} needs a document page or must stay open. A sample sale needs the page with its terms.`);
     }
   }
   for (const [key, child] of Object.entries(value)) {
-    if (key !== "source") checkSources(child, folder, `${path}.${key}`, errors);
+    if (key !== "source") checkSources(child, folder, documents, [...location, key], errors);
   }
 }
 
@@ -48,7 +65,8 @@ export function inspectReview(raw, folder) {
   for (const name of [...Object.keys(raw.parties), ...Object.keys(raw.assets), ...Object.keys(raw.events)]) {
     if (!id.test(name) || ["__proto__", "constructor", "prototype"].includes(name)) errors.push("Use simple IDs for people, property and events.");
   }
-  checkSources(raw, folder, "Household", errors);
+  if (errors.length) return { errors };
+  checkSources(raw, folder, raw.documents, [], errors);
 
   const viewIds = new Set();
   for (const view of raw.views) {
@@ -63,17 +81,25 @@ export function inspectReview(raw, folder) {
     if (!person.marital.source?.doc) errors.push(`Cite the page that shows whether ${person.name} is married.`);
   }
   for (const [name, item] of Object.entries({ ...raw.parties, ...raw.assets })) {
-    if (item.kind === "llc" && (!isCited(item.llc?.source)
-        || (item.llc.source.status !== "unknown" && !item.llc.source.doc))) {
+    if (item.kind === "llc" && (!documentOrUnknown(item.llc?.source)
+        || (item.llc.source.status === "unknown" && item.llc.successor))) {
       errors.push(`Cite ${name}'s agreement on what happens at a death, or show that the papers do not say.`);
     }
-    if (["retirement", "insurance"].includes(item.kind) && (!item.designation || !isCited(item.designation.source))) {
-      errors.push(`Show what the paperwork says about who receives ${name}, or show that the papers do not say.`);
+    const designation = item.designation;
+    if ((designation || ["retirement", "insurance"].includes(item.kind)) && (!documentOrUnknown(designation?.source)
+        || (designation.source.status === "unknown" && (designation.primary?.length || designation.contingent?.length)))) {
+      errors.push(`Cite the beneficiary page for ${name}, or leave the beneficiary open.`);
+    }
+    if (item.will && (!documentOrUnknown(item.will.source) || (item.will.source.status === "unknown" && item.will.none))) {
+      errors.push(`Cite what the will says for ${name}, or leave the will terms open.`);
     }
     if (item.will?.residueTo && (!item.will.source?.doc || raw.documents[item.will.source.doc]?.signed !== "signed")) {
       errors.push(`The papers do not show a signed will for ${name}. Keep the recipient open.`);
     }
-    if (item.trust?.onDeath?.source?.doc && raw.documents[item.trust.onDeath.source.doc]?.signed !== "signed") {
+    const onDeath = item.trust?.onDeath;
+    if (onDeath && (!documentOrUnknown(onDeath.source)
+        || (onDeath.source.doc && raw.documents[onDeath.source.doc]?.signed !== "signed")
+        || (onDeath.source.status === "unknown" && (onDeath.first || onDeath.trusteeAfter)))) {
       errors.push(`Cite signed papers for what ${name} does at a death, or show that the papers do not say.`);
     }
     const trust = raw.parties[item.trustSchedule?.trust];

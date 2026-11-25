@@ -5,6 +5,7 @@
     "moduleResolution": "Bundler",
     "allowJs": true,
     "strict": true,
+    "skipLibCheck": true,
     "noEmit": true,
     "jsx": "react-jsx",
     "types": ["node", "vite/client"]

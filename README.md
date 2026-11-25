@@ -26,7 +26,7 @@ No human attorney has reviewed a real family's output yet; one real household ha
 
 ## Your documents
 
-Your documents go to whatever model your agent already uses, and nowhere else. This tool has no server and makes no network calls of its own. Before you feed it the real thing, try a redacted set, with names and account numbers blacked out, and check that the citations land on the right pages.
+With the standalone kit, your documents go to whatever model your agent already uses. The kit makes no network calls of its own. The eve version stores documents and session history as described below. Before you feed either version the real thing, try a redacted set, with names and account numbers blacked out, and check that the citations land on the right pages.
 
 ## Install
 
@@ -62,7 +62,7 @@ A map is only as useful as the papers behind it. In the eve chat, give the agent
 
 Download the ownership view, the death view, and a QSBS ledger when the folder supports one. The download also includes a list of what to do and the model with its citations. Keep the files, open the HTML offline, or take them to an attorney or another AI.
 
-Your own Vercel project runs the chat and sandbox. Vercel AI Gateway sends the text the agent reads to Anthropic Claude Sonnet 5 by default. If you set `BELONGS_TO_MODEL`, name and review the provider you choose before sharing documents. The deployment and model provider handle the files and their contents. Start with the fictional folders.
+Your own Vercel project runs the chat and sandbox. Document text stays in eve’s session history, and the uploaded files stay in the sandbox within your deployment. Vercel AI Gateway sends the text the agent reads to Anthropic Claude Sonnet 5.5 by default. If you set `BELONGS_TO_MODEL`, review the provider you choose before sharing documents. Start with the fictional folders.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsilverstein%2Fbelongs-to&root-directory=eve&env=BELONGS_TO_PASSWORD&project-name=belongs-to)
 
@@ -86,7 +86,7 @@ If the host runs out of file watchers, use the compiled agent with the same chat
 
 ```sh
 cd eve
-npm run eval -- --max-concurrency 1
+npm run eval -- --exclude-tag fixture --max-concurrency 1
 ```
 
 Each eve eval sends one folder, waits for a real eve question, answers it, and inspects the returned files. It checks the model with the kit and verifies page references and a set of known facts against the fictional papers. The kit's layout audit also has to pass before any file leaves the sandbox. Page numbers and the checked examples can catch real errors. A reader with the source in hand still checks whether every statement follows from its cited page.
@@ -100,7 +100,7 @@ node scripts/fixture-target.mjs
 (cd .eve-fixture && EVE_DEV=1 ../node_modules/.bin/eve start --host 127.0.0.1 --port 4289)
 ```
 
-With the fixture server running, use `npm run eval -- --url http://127.0.0.1:4289 --max-concurrency 1` from `eve/` in another terminal. The live eval above measures whether the model can extract the facts from the source pages.
+With the fixture server running, use `npm run eval -- --url http://127.0.0.1:4289 --max-concurrency 1` from `eve/` in another terminal. This includes a regression that tries to name a Roth beneficiary without a source page. The live eval above measures whether the model can extract the facts from the source pages. From the repository root, run `eve/node_modules/.bin/tsc -p eve` for the type check.
 
 ## Export and share
 

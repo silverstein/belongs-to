@@ -29,13 +29,11 @@ console.log(`facts audit: ${facts.ok ? "passed" : "FAILED"}`);
 for (const c of facts.checks) console.log(`  ${c.passed ? "ok " : "!! "} ${c.name}${c.passed ? "" : `\n      ${c.problems.join("\n      ")}`}`);
 if (facts.open.length) console.log(`  open facts shown on the page: ${facts.open.length}\n      ${facts.open.map((o) => `${o.status}: ${o.where}`).join("\n      ")}`);
 
-if (!facts.ok && !force) process.exit(1);
-
 const pages = [];
 const citedDocs = documentsLookedAt(model);
 let failed = !facts.ok;
 
-for (const view of model.views) {
+function buildView(view) {
   const notes = (view.notes ?? []).map((note, i) => ({ ...note, letter: String.fromCharCode(65 + i) }));
   const noteBadges = new Map();
   for (const note of notes) if (note.on) { if (!noteBadges.has(note.on)) noteBadges.set(note.on, []); noteBadges.get(note.on).push({ letter: note.letter, tone: note.tone }); }
@@ -105,9 +103,19 @@ for (const view of model.views) {
   if (!layout.ok) failed = true;
 
   const html = pageHtml({ model, view, figureSvg: rendered.svg, figureWidth: rendered.width, stackedSvg: stacked?.svg ?? null, extraSections, notes, legend, receipt, sourcesUsed: citedDocs,
-    readerNote: args.includes("--eve") ? "Your deployment and the model it calls through Vercel AI Gateway handle these documents." : undefined });
+    readerNote: args.includes("--eve") ? "Your Vercel deployment keeps document text in eve’s session history and uploaded files in the sandbox. The model reads the text through Vercel AI Gateway." : undefined });
   const file = join(outDir, `${view.id}.html`);
   pages.push({ file, html });
+}
+
+for (const view of model.views) {
+  try {
+    buildView(view);
+  } catch (error) {
+    console.log(`view ${view.id}: layout audit FAILED`);
+    console.log(`      ${error.message}`);
+    failed = true;
+  }
 }
 
 if (failed && !force) process.exit(1);

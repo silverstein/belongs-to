@@ -85,6 +85,8 @@ function App() {
       ? { Authorization: `Basic ${btoa(String.fromCharCode(...new TextEncoder().encode(`family:${password}`)))}` } : {},
   });
   const questions = openInteractions(agent.view).filter((item) => item.request.kind === "question" && item.answer === undefined);
+  const question = questions[0];
+  const canTypeAnswer = question?.request.allowFreeform ?? question?.request.display === "text";
   const busy = sending || agent.status === "busy" || agent.status === "resuming";
   const packets = agent.messages.flatMap((message) => message.parts.flatMap((part) =>
     part.type === "tool" && part.name === "finish_review" && part.state === "completed" && isPacket(part.output)
@@ -131,9 +133,8 @@ function App() {
 
   async function sendText(event: FormEvent) {
     event.preventDefault();
-    if (!draft.trim() || (busy && questions.length === 0)) return;
+    if (!draft.trim() || (question ? !canTypeAnswer : busy)) return;
     setProblem("");
-    const question = questions[0];
     try {
       if (question) {
         await agent.respond([{ interactionId: question.interactionId, text: draft.trim() }]);
@@ -192,7 +193,7 @@ function App() {
             <label>Family password<input type="password" autoComplete="current-password" value={password}
               disabled={busy} onChange={(event) => setPassword(event.target.value)} /></label>
           </details>
-          <p className="privacy">Your Vercel deployment handles the files. The model reads their contents through AI Gateway.</p>
+          <p className="privacy">Your Vercel deployment keeps the document text in eve’s session history and the uploaded files in the sandbox. The model reads the text through AI Gateway.</p>
         </aside>
         <section className="chat" aria-label="Review">
           <header className="chatHeader">
@@ -233,11 +234,11 @@ function App() {
             )}
             {(problem || agent.error) && <p className="error" role="alert">{problem || agent.error?.message}</p>}
           </div>
-          {reviewName && (
+          {reviewName && (!question || canTypeAnswer) && (
             <form className="composer" onSubmit={(event) => void sendText(event)}>
-              <input aria-label="Message" placeholder={questions.length ? "Type your answer" : "Ask about the pages"}
-                disabled={busy && !questions.length} value={draft} onChange={(event) => setDraft(event.target.value)} />
-              <button disabled={!draft.trim() || (busy && !questions.length)}>Send</button>
+              <input aria-label="Message" placeholder={question ? "Type your answer" : "Ask about the pages"}
+                disabled={busy && !question} value={draft} onChange={(event) => setDraft(event.target.value)} />
+              <button disabled={!draft.trim() || (busy && !question)}>Send</button>
             </form>
           )}
         </section>

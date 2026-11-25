@@ -15,13 +15,23 @@ export default defineAgent({
     if (!Array.isArray(listing) || !listing.length) return "Please send the example documents.";
     const filenames = listing.map(({ name }) => name);
     if (reads.length === 1) return tool("read_documents", { filenames });
-    const result = toolResults.find((row) => row.name === "finish_review");
+    const input = lastUserMessage ?? messages.map((message) => message.text).join("\n");
+    const regression = input.includes("Try the invented Roth beneficiary first.");
+    const reviews = toolResults.filter((row) => row.name === "finish_review");
+    const result = reviews.at(-1);
     if (result) {
       const output = result.output as { waitingForDocuments?: boolean; errors?: string[] };
-      if (output?.errors) return `The example could not be checked. ${output.errors.join(" ")}`;
+      if (output?.errors) {
+        if (regression && reviews.length === 1) return tool("finish_review", { modelJson: JSON.stringify(fixtures.park) });
+        return `The example could not be checked. ${output.errors.join(" ")}`;
+      }
       return output?.waitingForDocuments ? "Start again with the complete folder." : "The pages are ready. Start with the gap in the paperwork.";
     }
-    const input = lastUserMessage ?? messages.map((message) => message.text).join("\n");
+    if (regression) {
+      const draft = structuredClone(fixtures.park);
+      draft.assets.roth.designation = { primary: [{ to: "mia", share: 1 }], source: { status: "assumed" } };
+      return tool("finish_review", { modelJson: JSON.stringify(draft) });
+    }
     const family = Object.keys(fixtures).find((name) => new RegExp(name, "i").test(input))
       ?? (filenames.includes("birch-oa.md") ? "ellery" : filenames.includes("captable.md") ? "okafor" : "park");
     return tool("finish_review", { modelJson: JSON.stringify(fixtures[family]) });
