@@ -83,7 +83,7 @@ export async function readDraft(inputText: string, unwrapped = false): Promise<D
       if (fact.path === `Household.${section}.${id}`) fact.quote = name;
       if (fact.label === "Value" && typeof usd === "number") fact.quote = number.format(usd);
     }
-    const missing = [["will", "Will"], ["designation", "Beneficiary form"], ["llc", "Agreement"], ["value", "Value"]]
+    const missing = [["will", "a will"], ["designation", "a beneficiary form"], ["llc", "an operating agreement"], ["value", "a value"]]
       .filter(([key]) => object(object(item[key]).source).status === "unknown").map(([, label]) => label);
     return [{
       id, name, short: string(item.short) || (kind === "person" ? name.split(" ")[0] : kind === "trust" ? "Trust" : name),

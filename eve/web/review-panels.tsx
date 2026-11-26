@@ -86,7 +86,7 @@ function Node({ row, context, children, root = false, index }: {
       {row.amount !== undefined && <div className="val">{money.format(row.amount)}{row.cover && <small>life cover</small>}</div>}</div>
     {row.facts.length > 0 && <div className="facts">{row.facts.map((fact) => <PageChip key={fact.path} fact={fact} context={context} />)}</div>}
     {row.missing.length > 0 && <div className="lines">{row.missing.map((gap) =>
-      <div key={gap} className="fl gap"><Mark kind="missing" /><span><b>Missing</b> {gap}</span></div>)}</div>}
+      <div key={gap} className="fl gap"><Mark kind="missing" /><span><b>Missing:</b> {gap} for {row.short}</span></div>)}</div>}
     {children && <div className="kids">{children}</div>}
   </div>;
 }
