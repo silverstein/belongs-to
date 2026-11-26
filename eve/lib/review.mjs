@@ -289,28 +289,32 @@ export function inspectReview(raw, folder) {
   if (errors.length) return { errors, activity: { ...activity, facts: "failed" } };
 
   const todo = [...new Set([...raw.views.flatMap((view) => Object.values(view.fixes ?? {})), ...todosFromIntake(model)])];
-  const gaps = new Set();
-  if (stateOpen) gaps.add("The family's state of residence");
+  const gaps = new Map();
+  const addGap = (text, detail) => gaps.set(text, gaps.get(text) ?? detail);
+  const fixFor = (id) => raw.views.map((view) => view.fixes?.[id]).find(Boolean);
+  if (stateOpen) addGap("The family's state of residence");
   for (const doc of Object.values(raw.documents)) {
-    if (["unsigned", "unknown"].includes(doc.signed)) gaps.add(`A signed copy of ${doc.short}`);
+    if (["unsigned", "unknown"].includes(doc.signed)) addGap(`A signed copy of ${doc.short}`);
   }
-  const beneficiaryGaps = new Set();
+  const beneficiaryGaps = new Map();
   const heldItems = Object.values(model.nodes).filter((node) => model.holdings.some((holding) => holding.held === node.id));
   for (const item of Object.values(model.nodes)) {
     if (item.designation?.source?.status === "unknown" && !["property", "vehicle"].includes(item.kind)) {
-      beneficiaryGaps.add(item.id);
-      gaps.add(`Who is named to receive ${item.name}`);
+      const text = `Who is named to receive ${item.name}`;
+      beneficiaryGaps.set(item.id, text);
+      addGap(text);
     }
     if (item.designation?.source?.doc && item.designation.primary?.length === 0 && !item.designation.contingent?.length) {
-      beneficiaryGaps.add(item.id);
-      gaps.add(`Any newer beneficiary form for ${item.name}`);
+      const text = `Any newer beneficiary form for ${item.name}`;
+      beneficiaryGaps.set(item.id, text);
+      addGap(text);
     }
   }
   for (const [eventId, event] of Object.entries(model.events)) {
     if (event.kind !== "death") continue;
     for (const route of deathRoutes(model, eventId)) {
       if (route.route === "unknown" && !(beneficiaryGaps.has(route.item.id) && route.detail.startsWith("No beneficiary form in the documents"))) {
-        gaps.add(`Where ${route.item.name} goes if ${model.nodes[event.who].name} dies`);
+        addGap(`Where ${route.item.name} goes if ${model.nodes[event.who].name} dies`, fixFor(route.item.id));
       }
     }
   }
@@ -318,10 +322,15 @@ export function inspectReview(raw, folder) {
     if (item.result === "found") continue;
     if (/\b(?:beneficiar(?:y|ies)|who is named to receive)\b/i.test(item.what)) {
       const named = heldItems.filter((node) => includesName(item.what, node.name));
-      if (named.length === 1 && beneficiaryGaps.has(named[0].id)) continue;
+      if (named.length === 1 && beneficiaryGaps.has(named[0].id)) {
+        addGap(beneficiaryGaps.get(named[0].id), item.todo);
+        continue;
+      }
     }
-    gaps.add(item.what);
+    addGap(item.what, item.todo);
   }
-  return { errors, gapList: [...gaps], todo, checks: facts.checks.map(({ name, passed }) => ({ name, passed })),
+  for (const [id, text] of beneficiaryGaps) addGap(text, fixFor(id));
+  return { errors, gapList: [...gaps.keys()], gapDetails: [...gaps].map(([text, detail]) => ({ text, detail })), todo,
+    checks: facts.checks.map(({ name, passed }) => ({ name, passed })),
     activity: { ...activity, facts: "passed" } };
 }

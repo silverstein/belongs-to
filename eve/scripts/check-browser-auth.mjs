@@ -24,14 +24,14 @@ try {
   });
   await protectedPage.goto(protectedUrl);
   const password = protectedPage.getByLabel("Family password");
-  const ellery = protectedPage.getByRole("button", { name: "Ellery", exact: true });
+  const ellery = protectedPage.getByRole("button", { name: /^The Ellerys/ });
   const folder = protectedPage.locator('input[type="file"]');
   await password.waitFor();
-  assert.equal(await folder.isDisabled(), true);
-  for (const family of ["Ellery", "Okafor", "Park"]) {
-    assert.equal(await protectedPage.getByRole("button", { name: family, exact: true }).isDisabled(), true);
+  assert.equal(await folder.count(), 0);
+  for (const family of [/^The Ellerys/, /^The Okafors/, /^The Parks/]) {
+    assert.equal(await protectedPage.getByRole("button", { name: family }).count(), 0);
   }
-  await protectedPage.locator(".drop").evaluate((target) => {
+  await protectedPage.locator(".choose").evaluate((target) => {
     const dataTransfer = new DataTransfer();
     dataTransfer.items.add(new File(["Fictional fixture."], "sample.md"));
     target.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer }));
@@ -39,28 +39,30 @@ try {
   assert.equal(requests.length, 0);
 
   await password.fill("wrong-fixture-password");
+  await protectedPage.getByRole("button", { name: "Open", exact: true }).click();
   assert.equal(await folder.isEnabled(), true);
   const [rejected] = await Promise.all([protectedPage.waitForResponse(isStart), ellery.click()]);
   assert.equal(rejected.status(), 401);
   assert.doesNotMatch((await rejected.headerValue("www-authenticate")) ?? "", /\bbasic\b/i);
-  const alert = protectedPage.getByRole("alert").filter({ hasText: "That password didn't work." });
+  const alert = protectedPage.getByRole("alert").filter({ hasText: "That password didn’t work." });
   await alert.waitFor();
-  assert.equal(await alert.innerText(), "That password didn't work.");
-  assert.equal(await ellery.isDisabled(), true);
-  assert.equal(await folder.isDisabled(), true);
+  assert.equal(await alert.innerText(), "That password didn’t work.");
+  assert.equal(await ellery.count(), 0);
+  assert.equal(await folder.count(), 0);
 
   await password.fill(fixturePassword);
+  await protectedPage.getByRole("button", { name: "Open", exact: true }).click();
   const [accepted] = await Promise.all([protectedPage.waitForResponse(isStart), ellery.click()]);
   assert.equal(accepted.ok(), true);
   await protectedPage.locator(".question").first().waitFor({ timeout: 60_000 });
-  assert.equal(await protectedPage.getByText("That password didn't work.", { exact: true }).count(), 0);
+  assert.equal(await protectedPage.getByText("That password didn’t work.", { exact: true }).count(), 0);
   for (const request of requests) assert.match((await request.headerValue("authorization")) ?? "", /^Basic /);
   await protectedPage.close();
   console.log("Protected fixture passed. The empty page sent no Eve requests, a wrong password returned an inline 401, and the correct password received a chat question.");
 
   const localPage = await browser.newPage();
   await localPage.goto(localUrl);
-  const localEllery = localPage.getByRole("button", { name: "Ellery", exact: true });
+  const localEllery = localPage.getByRole("button", { name: /^The Ellerys/ });
   await localEllery.waitFor();
   assert.equal(await localPage.getByLabel("Family password").count(), 0);
   assert.equal(await localPage.locator('input[type="file"]').isEnabled(), true);

@@ -68,7 +68,7 @@ try {
       gapList: inspected.gapList,
       confirmationKey,
       priorAnswer: prior?.key === confirmationKey && prior.answer === "show" ? prior.answer : undefined,
-      activity: { ...inspected.activity, layout: "passed" },
+      activity: { ...inspected.activity, layout: "passed", gaps: inspected.gapDetails },
     }));
   } else {
     if (expectedKey !== confirmationKey) throw Error("The facts changed during review. Check the draft again.");

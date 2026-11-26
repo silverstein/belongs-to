@@ -14,6 +14,7 @@ type CheckResult = "passed" | "failed" | "skipped";
 type AuditActivity = {
   audit?: Record<"citations" | "dollars" | "names", { checked: number; failed: number }>;
   evidence?: Array<{ text: string; doc: string; at: string }>;
+  gaps?: Array<{ text: string; detail?: string }>;
   facts: CheckResult;
   layout: CheckResult;
 };
